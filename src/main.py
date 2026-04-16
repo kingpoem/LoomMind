@@ -1,15 +1,13 @@
 """最小 LangGraph Agent：单节点调用聊天模型。"""
 
-from __future__ import annotations
-
-import os
 from typing import Annotated, TypedDict
 
 from dotenv import load_dotenv
 from langchain_core.messages import AIMessage, HumanMessage, SystemMessage
-from langchain_openai import ChatOpenAI
 from langgraph.graph import END, START, StateGraph
 from langgraph.graph.message import add_messages
+
+from openrouter import openrouter_chat
 
 load_dotenv()
 
@@ -19,12 +17,10 @@ class AgentState(TypedDict):
 
 
 def build_graph():
-    model = ChatOpenAI(
-        model=os.environ.get("OPENAI_MODEL", "gpt-4o-mini"),
-        temperature=0,
-    )
+    model = openrouter_chat()
 
     def agent(state: AgentState) -> dict:
+        """根据当前状态中的消息列表调用模型，追加一条 AI 回复。"""
         reply: AIMessage = model.invoke(state["messages"])
         return {"messages": [reply]}
 
@@ -35,10 +31,7 @@ def build_graph():
     return g.compile()
 
 
-def main() -> None:
-    if not os.environ.get("OPENAI_API_KEY"):
-        raise SystemExit("请在 .env 中设置 OPENAI_API_KEY")
-
+def main():
     app = build_graph()
     result = app.invoke(
         {

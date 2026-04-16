@@ -1,9 +1,14 @@
-.PHONY: run clean
-
-LOOM := $(CURDIR)/loom
+.PHONY: run clean format lint
 
 run:
-	UV_PROJECT_ENVIRONMENT=$(LOOM) uv run python src/main.py
+	uv run python src/main.py
+
+format:
+	uv run --group dev ruff format src
+
+lint:
+	uv run --group dev ruff format --check src
+	uv run --group dev ruff check src
 
 clean:
 	rm -rf .pytest_cache .mypy_cache .ruff_cache build dist

@@ -6,7 +6,6 @@
 !.env.example
 
 # uv / Python
-loom/
 .venv/
 __pycache__/
 *.py[cod]
