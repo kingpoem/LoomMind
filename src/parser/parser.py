@@ -1,6 +1,5 @@
 """CLI 参数解析。
-uv run python src/main.py              # 默认：飞书长连接（同 --lark）
-uv run python src/main.py --lark       # 在飞书中对话（长连接）
+uv run python src/main.py --lark       # 飞书长连接
 uv run python src/main.py --cli        # 本地终端多轮对话
 uv run python src/main.py --help
 """
@@ -12,7 +11,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         description="LoomMind：LangGraph + 飞书（用户身份发消息）"
     )
-    mode = parser.add_mutually_exclusive_group()
+    mode = parser.add_mutually_exclusive_group(required=True)
     mode.add_argument(
         "--lark",
         action="store_true",

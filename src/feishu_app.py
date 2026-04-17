@@ -1,7 +1,5 @@
 """飞书长连接：接收消息（机器人会话事件），以用户身份发回复。"""
 
-from __future__ import annotations
-
 import json
 import logging
 import os

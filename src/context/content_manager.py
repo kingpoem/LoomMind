@@ -1,6 +1,4 @@
-"""多轮对话内容：序列化与持久化到仓库根目录下的 log/ 目录下"""
-
-from __future__ import annotations
+"""会话 JSON 写入 log/raw/。导出纯文本见 scripts/export_log_txt.py。"""
 
 import json
 from datetime import UTC, datetime
@@ -16,10 +14,12 @@ def _repo_root() -> Path:
 
 
 class ContentManager:
-    """管理当前会话消息并写入 log 目录下的 JSON 文件。"""
+    """管理当前会话消息并写入 log/raw/ 下的 JSON 文件。"""
 
     def __init__(self, log_dir: Path | None = None) -> None:
-        self.log_dir = log_dir or (_repo_root() / "log")
+        # log_dir 表示存放 *.json 的目录（默认 log/raw）
+        self.raw_dir = log_dir or (_repo_root() / "log" / "raw")
+        self.log_root = self.raw_dir.parent
         self.session_id = (
             datetime.now(UTC).strftime("%Y%m%dT%H%M%S") + f"_{uuid4().hex[:8]}"
         )
@@ -37,7 +37,7 @@ class ContentManager:
         )
 
     def persist(self, messages: list[BaseMessage]) -> Path:
-        self.log_dir.mkdir(parents=True, exist_ok=True)
-        path = self.log_dir / f"{self.session_id}.json"
+        self.raw_dir.mkdir(parents=True, exist_ok=True)
+        path = self.raw_dir / f"{self.session_id}.json"
         path.write_text(self.dumps_session(messages), encoding="utf-8")
         return path

@@ -19,7 +19,7 @@ dev = ["ruff>=0.9.0"]
 [tool.ruff]
 target-version = "py313"
 line-length = 88
-src = ["src"]
+src = ["src", "scripts"]
 
 [tool.ruff.format]
 quote-style = "double"

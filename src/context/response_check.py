@@ -1,7 +1,5 @@
 """检测用户输入或模型回答中的控制指令"""
 
-from __future__ import annotations
-
 from enum import Enum
 
 

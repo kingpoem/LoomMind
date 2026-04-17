@@ -32,7 +32,7 @@ def run_local_demo() -> None:
     """本地多轮问答（不连接飞书）。
 
     用户输入或模型整段回复经去空白、小写后恰好为 exit 或 log 时，
-    结束会话或打印当前对话 JSON 并写入 log/。
+    结束会话或打印当前对话 JSON 并写入 log/raw/。
     """
     from context.content_manager import ContentManager
     from context.response_check import ResponseAction, detect_reply_command
@@ -41,7 +41,9 @@ def run_local_demo() -> None:
     manager = ContentManager()
     messages: list[BaseMessage] = [SystemMessage(content="你是简洁助手，用中文回答。")]
 
-    print("多轮问答。输入 exit 结束；输入 log 打印当前全部对话 JSON（并写入 log/）。")
+    print(
+        "多轮问答。输入 exit 结束；输入 log 打印当前全部对话 JSON（并写入 log/raw/）。"
+    )
     while True:
         try:
             user_text = input("你: ").strip()
