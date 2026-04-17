@@ -12,6 +12,7 @@ dependencies = [
     "lark-oapi>=1.5.3",
     "python-socks[asyncio]>=2.4.0",
     "tiktoken>=0.12.0",
+    "mcp[cli]>=1.27.0",
 ]
 
 [dependency-groups]

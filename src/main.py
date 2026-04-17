@@ -7,7 +7,6 @@ from lark import run_feishu_long_connection
 from parser import parse_args
 from skills import list_skill_names
 
-
 def main() -> None:
     load_dotenv()
     args = parse_args()

@@ -16,7 +16,8 @@ API key should be written in `.env` file.
 
 The bot should act in lark as user profile.
 
-The environment variable `$LOOMMIND_TOOLS` tells where to search for tools.
+Tools are registered via an in-process MCP server. Each tool lives in `src/tools/list/<name>.py` and exposes a `register(mcp)` function that decorates its handler with `@mcp.tool()`. `src/tools/server.py` auto-imports every module in `list/` at startup, and `src/tools/loader.py` adapts the registered MCP tools into LangChain `StructuredTool`s for the agent.
 
-- `$LOOMMIND_TOOLS/tools` gives all the possible tools.
-- `$LOOMMIND_TOOLS/scripts` gives all the possible scripts to run with.
+## TODO
+
+Lark mode will automatically decline the tools that need approval. Refer to `set_confirmation_callback` in `src/tools/loader.py` for details.

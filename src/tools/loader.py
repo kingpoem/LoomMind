@@ -1,76 +1,85 @@
-"""从 LOOMMIND_TOOLS 目录加载工具定义。"""
+"""把内置 MCP server 的工具适配为 LangChain StructuredTool 列表。"""
 
-import json
-import os
-import shlex
-import subprocess
-from pathlib import Path
+import asyncio
+import logging
+import sys
+from typing import Callable
 
 from langchain_core.tools import StructuredTool
-from pydantic import BaseModel, Field
+from mcp.types import TextContent
 
-_VAR_SCRIPTS_PATH = "${scripts_path}"
-_VAR_PARAMS = "${params}"
+from .server import builtin_server, requires_confirmation
+
+logger = logging.getLogger(__name__)
+
+ConfirmationCallback = Callable[[str, dict], bool]
 
 
-class _ToolInput(BaseModel):
-    input: str = Field(description="传给工具的输入（JSON 字符串或纯文本）")
+def _default_confirm(tool_name: str, args: dict) -> bool:
+    """默认确认函数：在终端弹 y/N 提示；非 tty 环境一律拒绝。"""
+    if not sys.stdin.isatty():
+        logger.warning("工具 %s 需要确认，但 stdin 不是 tty，默认拒绝", tool_name)
+        return False
+    print(f"\n[confirmation] LLM 想调用工具: {tool_name}")
+    for k, v in args.items():
+        print(f"  {k} = {v!r}")
+    ans = input("允许执行？[y/N] ").strip().lower()
+    return ans in ("y", "yes")
 
 
-def _make_tool(data: dict, scripts_path: str) -> StructuredTool:
-    cmd_template = data["cmd"]
+_confirm_callback: ConfirmationCallback = _default_confirm
 
-    def run(input: str) -> str:
-        cmd = cmd_template.replace(_VAR_SCRIPTS_PATH, scripts_path)
 
-        # ${params} 出现时替换为 shell 转义后的参数，否则经 stdin 传入
-        if _VAR_PARAMS in cmd:
-            cmd = cmd.replace(_VAR_PARAMS, shlex.quote(input))
-            stdin_data = None
+def set_confirmation_callback(cb: ConfirmationCallback) -> None:
+    """覆盖默认确认函数。CLI 用默认 input()，Lark 等前端可按需替换。"""
+    global _confirm_callback
+    _confirm_callback = cb
+
+
+def _stringify_content(content_list) -> str:
+    """把 MCP 返回的 content 列表拼成纯文本。"""
+    parts: list[str] = []
+    for item in content_list:
+        if isinstance(item, TextContent):
+            parts.append(item.text)
         else:
-            stdin_data = input
+            parts.append(str(item))
+    return "\n".join(parts).strip() or "(no output)"
 
-        result = subprocess.run(
-            cmd,
-            shell=True,
-            input=stdin_data,
-            capture_output=True,
-            text=True,
-            timeout=30,
-        )
-        if result.returncode != 0:
-            return f"Error (exit {result.returncode}): {result.stderr.strip()}"
-        return result.stdout.strip() or "(no output)"
+
+def _make_tool(name: str, description: str, input_schema: dict) -> StructuredTool:
+    needs_confirm = requires_confirmation(name)
+
+    async def arun(**kwargs) -> str:
+        if needs_confirm and not _confirm_callback(name, kwargs):
+            return f"Tool call '{name}' denied by user."
+        content, _structured = await builtin_server.call_tool(name, kwargs)
+        return _stringify_content(content)
+
+    def run(**kwargs) -> str:
+        return asyncio.run(arun(**kwargs))
 
     return StructuredTool.from_function(
         func=run,
-        name=data["name"],
-        description=data["description"],
-        args_schema=_ToolInput,
+        coroutine=arun,
+        name=name,
+        description=description or "",
+        args_schema=input_schema,
     )
 
 
 def load_tools() -> list[StructuredTool]:
-    """读取 $LOOMMIND_TOOLS/loader/*.json，返回 LangChain StructuredTool 列表。
-
-    若环境变量未设置或目录不存在，返回空列表。
-    """
-    base = os.environ.get("LOOMMIND_TOOLS", "").strip()
-    if not base:
+    """从 BuiltinServer 拉取已注册工具，返回 LangChain StructuredTool 列表。"""
+    try:
+        mcp_tools = asyncio.run(builtin_server.list_tools())
+    except Exception:
+        logger.exception("从 BuiltinServer 拉取工具列表失败")
         return []
 
-    loader_dir = Path(base) / "loader"
-    if not loader_dir.is_dir():
-        return []
-
-    scripts_path = str(Path(base) / "scripts")
-
-    tools = []
-    for path in sorted(loader_dir.glob("*.json")):
+    tools: list[StructuredTool] = []
+    for t in mcp_tools:
         try:
-            data = json.loads(path.read_text(encoding="utf-8"))
-            tools.append(_make_tool(data, scripts_path))
-        except (json.JSONDecodeError, KeyError):
-            pass
-
+            tools.append(_make_tool(t.name, t.description or "", t.inputSchema))
+        except Exception:
+            logger.exception("适配 MCP 工具到 LangChain 失败: %s", t.name)
     return tools

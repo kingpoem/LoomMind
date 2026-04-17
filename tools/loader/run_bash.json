@@ -1,5 +1,0 @@
-{
-  "name": "run_bash",
-  "description": "在本机的 bash shell 中执行命令，返回 stdout、stderr 和退出码。\n\ninput 参数：要执行的完整 bash 命令字符串（纯文本，不是 JSON），支持管道、重定向、通配符等 shell 特性。命令在当前主机上以当前进程的权限执行。\n\n示例 input：\n- \"ls -la /tmp\"\n- \"uname -a\"\n- \"echo hello | wc -c\"\n- \"find . -name '*.py' | head -5\"\n\n限制：单次命令 30 秒超时；stderr 和非零退出码不会导致工具调用失败，但会原样返回给你以便判断命令是否成功。",
-  "cmd": "python ${scripts_path}/run_bash.py ${params}"
-}
