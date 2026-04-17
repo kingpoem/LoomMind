@@ -363,6 +363,7 @@ dependencies = [
     { name = "lark-oapi" },
     { name = "python-dotenv" },
     { name = "python-socks" },
+    { name = "tiktoken" },
 ]
 
 [package.dev-dependencies]
@@ -378,6 +379,7 @@ requires-dist = [
     { name = "lark-oapi", specifier = ">=1.5.3" },
     { name = "python-dotenv", specifier = ">=1.0.0" },
     { name = "python-socks", extras = ["asyncio"], specifier = ">=2.4.0" },
+    { name = "tiktoken", specifier = ">=0.12.0" },
 ]
 
 [package.metadata.requires-dev]

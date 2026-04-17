@@ -8,6 +8,7 @@ from langgraph.graph.message import add_messages
 from langgraph.prebuilt import ToolNode
 
 from api import create_chat_model
+from skills import load_all_skills
 from tools.loader import load_tools
 
 
@@ -16,7 +17,7 @@ class AgentState(TypedDict):
 
 
 def build_graph():
-    tools = load_tools()
+    tools = [*load_tools(), *load_all_skills()]
     print(f"Loaded {len(tools)} tools.")
     model = create_chat_model()
     if tools:

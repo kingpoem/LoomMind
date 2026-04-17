@@ -7,8 +7,6 @@
 若项目后续改为工厂函数封装，可把扫描根目录扩到对应包路径或改为显式入口文件列表。
 """
 
-from __future__ import annotations
-
 import argparse
 import ast
 from collections.abc import Iterator
