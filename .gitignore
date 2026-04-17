@@ -1,7 +1,8 @@
 .cursor/
 
-# conversation logs (ContentManager)
-log/
+# conversation logs（保留 log/ 目录；仅忽略其下内容）
+log/*
+!log/.gitkeep
 
 # API keys and local env
 .env
@@ -19,7 +20,12 @@ __pycache__/
 dist/
 build/
 
+# Rust（独立 TUI 二进制）
+tui/target/
+
 # tooling
 .pytest_cache/
 .mypy_cache/
 .ruff_cache/
+
+.DS_Store

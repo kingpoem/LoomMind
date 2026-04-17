@@ -17,8 +17,9 @@
 
 import inspect
 import json
+from collections.abc import Callable
 from pathlib import Path
-from typing import Any, Callable
+from typing import Any
 
 from langchain_core.tools import StructuredTool
 
@@ -78,11 +79,13 @@ def validate_skills_config(raw: Any) -> None:
         if fn is None:
             raise KeyError(
                 f"skills_config.json[{idx}] handler={handler_key!r} 未找到。"
-                f"请确认 `business_funcs.py` 中存在同名函数 {handler_key!r}（且不以下划线开头）。"
+                f"请确认 `business_funcs.py` 中有同名函数 {handler_key!r}，"
+                "且不以下划线开头。"
             )
         if not callable(fn):
             raise TypeError(
-                f"skills_config.json[{idx}] handler={handler_key!r} 指向对象不可调用：{type(fn)!r}"
+                f"skills_config.json[{idx}] handler={handler_key!r} "
+                f"指向对象不可调用：{type(fn)!r}"
             )
 
 

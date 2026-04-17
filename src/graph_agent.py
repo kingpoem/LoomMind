@@ -1,47 +1,44 @@
-"""LangGraph Agent：支持工具调用的多节点图。"""
+"""LangGraph Agent：接入 planning 循环与工具调用。"""
 
-from typing import Annotated, TypedDict
+from collections.abc import Iterable
 
-from langchain_core.messages import AIMessage
-from langgraph.graph import END, START, StateGraph
-from langgraph.graph.message import add_messages
-from langgraph.prebuilt import ToolNode
+from langchain_core.tools import BaseTool
 
-from api import create_chat_model
+from planning import build_planning_graph
 from skills import load_all_skills
 from tools.loader import load_tools
 
 
-class AgentState(TypedDict):
-    messages: Annotated[list, add_messages]
+def list_available_skills() -> list[str]:
+    return [str(getattr(t, "name", "")) for t in load_all_skills()]
 
 
-def build_graph():
-    tools = [*load_tools(), *load_all_skills()]
-    print(f"Loaded {len(tools)} tools.")
-    model = create_chat_model()
-    if tools:
-        model = model.bind_tools(tools)
+def list_available_mcps() -> list[str]:
+    return [str(getattr(t, "name", "")) for t in load_tools()]
 
-    def agent(state: AgentState) -> dict:
-        reply: AIMessage = model.invoke(state["messages"])
-        return {"messages": [reply]}
 
-    def should_continue(state: AgentState) -> str:
-        last = state["messages"][-1]
-        if isinstance(last, AIMessage) and last.tool_calls:
-            return "tools"
-        return END
+def _filter_tools(
+    tools: list[BaseTool], allowed: Iterable[str] | None
+) -> list[BaseTool]:
+    if allowed is None:
+        return list(tools)
+    allow = set(allowed)
+    return [t for t in tools if str(getattr(t, "name", "")) in allow]
 
-    g = StateGraph(AgentState)
-    g.add_node("agent", agent)
-    g.add_edge(START, "agent")
 
-    if tools:
-        g.add_node("tools", ToolNode(tools))
-        g.add_conditional_edges("agent", should_continue, {"tools": "tools", END: END})
-        g.add_edge("tools", "agent")
-    else:
-        g.add_edge("agent", END)
+def build_graph(
+    *,
+    model_name: str | None = None,
+    enabled_skills: Iterable[str] | None = None,
+    enabled_mcps: Iterable[str] | None = None,
+):
+    """构建 LangGraph。
 
-    return g.compile()
+    - `model_name=None` 走默认模型；
+    - `enabled_skills=None` 表示「全部启用」，传空集合即「全部禁用」；
+    - `enabled_mcps` 同上。
+    """
+    mcps = _filter_tools(load_tools(), enabled_mcps)
+    skills = _filter_tools(load_all_skills(), enabled_skills)
+    tools: list[BaseTool] = [*mcps, *skills]
+    return build_planning_graph(model_name=model_name, tools=tools)

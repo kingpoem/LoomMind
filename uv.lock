@@ -526,6 +526,7 @@ dependencies = [
     { name = "langgraph" },
     { name = "lark-oapi" },
     { name = "mcp", extra = ["cli"] },
+    { name = "pyratatui" },
     { name = "python-dotenv" },
     { name = "python-socks" },
     { name = "tiktoken" },
@@ -543,6 +544,7 @@ requires-dist = [
     { name = "langgraph", specifier = ">=0.2.55" },
     { name = "lark-oapi", specifier = ">=1.5.3" },
     { name = "mcp", extras = ["cli"], specifier = ">=1.27.0" },
+    { name = "pyratatui", specifier = ">=0.2.8" },
     { name = "python-dotenv", specifier = ">=1.0.0" },
     { name = "python-socks", extras = ["asyncio"], specifier = ">=2.4.0" },
     { name = "tiktoken", specifier = ">=0.12.0" },
@@ -844,6 +846,23 @@ wheels = [
 [package.optional-dependencies]
 crypto = [
     { name = "cryptography" },
+]
+
+[[package]]
+name = "pyratatui"
+version = "0.2.8"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "typer" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/01/18/59ead08f571b0a1ad19f4d5564fb1c0da5efd9b16787fdc7d393741f955d/pyratatui-0.2.8.tar.gz", hash = "sha256:e712e8f35346dadc4884b36c8b2d4702ddeecdab6e72bd50e7268d91fa18cc6f", size = 1136919, upload-time = "2026-04-09T15:29:34.483Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/13/8f/6beefaead7ef7de47bef7bf814b8bee7cbf51030871d11a2313a2eb65f39/pyratatui-0.2.8-cp310-abi3-macosx_10_12_x86_64.whl", hash = "sha256:0c8abc11f15de51de8445ba68a4df791684ddf7d056c622e950316bdc3931a20", size = 2729764, upload-time = "2026-04-09T15:29:23.787Z" },
+    { url = "https://files.pythonhosted.org/packages/d8/0b/ed835d726cd0a140b9f769297b0a959b3474cf85c3cc4502f19e15b03cbf/pyratatui-0.2.8-cp310-abi3-macosx_11_0_arm64.whl", hash = "sha256:48d61acb562e7424e25e99cfdf38b2d04b488744c0307f882877e32fa7bc59cc", size = 2592798, upload-time = "2026-04-09T15:29:25.666Z" },
+    { url = "https://files.pythonhosted.org/packages/ab/09/90eb896313a8cb546a4ab7bb346d634a0927c80bef4748dd74744fbd58c5/pyratatui-0.2.8-cp310-abi3-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:3036073e2213864d7f7a3e1d94bba3b365601f76aedc8652c6787622665d0111", size = 2813732, upload-time = "2026-04-09T15:29:27.176Z" },
+    { url = "https://files.pythonhosted.org/packages/15/59/40f1f78cd74f60bcc250cf6b77c52c9f368784c51a22fb40d7fb29a40ac6/pyratatui-0.2.8-cp310-abi3-musllinux_1_2_aarch64.whl", hash = "sha256:2b3bbde545708cb0e5e73af2891b4debdb0450a842cc9a394d427adb1236eac1", size = 2873369, upload-time = "2026-04-09T15:29:28.782Z" },
+    { url = "https://files.pythonhosted.org/packages/77/20/c3cfcf7a011b1de2c6c62930aad2cae9e4e279679e2ceedbc64ed0ec48bf/pyratatui-0.2.8-cp310-abi3-musllinux_1_2_x86_64.whl", hash = "sha256:680f1db32b3b7f6c6e92087144d26a4cd3a2005b11ec4c40816de4429ca4cb78", size = 3039120, upload-time = "2026-04-09T15:29:30.688Z" },
+    { url = "https://files.pythonhosted.org/packages/3e/a8/d41736da31551503e6a2421210191a441221f6303b21bbd4bc98e14620f1/pyratatui-0.2.8-cp310-abi3-win_amd64.whl", hash = "sha256:09e65009fde7ded14279fba8d654f630bab98ec6a792d84ee5d4dceb4c197369", size = 2875162, upload-time = "2026-04-09T15:29:32.588Z" },
 ]
 
 [[package]]

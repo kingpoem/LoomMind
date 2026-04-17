@@ -29,6 +29,13 @@ def build_parser() -> argparse.ArgumentParser:
         action="store_true",
         help="在本地终端中进行多轮对话（不连接飞书）",
     )
+    parser.add_argument(
+        "--stdio",
+        action="store_true",
+        help=(
+            "与 --cli 联用：stdin/stdout NDJSON 与 TUI 通信（独占终端时请用 TUI 启动）"
+        ),
+    )
     return parser
 
 

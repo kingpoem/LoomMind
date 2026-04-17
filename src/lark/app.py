@@ -22,10 +22,11 @@ from lark_oapi.ws.client import Client as WSClient
 
 from context.content_manager import ContentManager
 from graph_agent import build_graph
+from memory import build_system_prompt_with_memory
 
 logger = logging.getLogger(__name__)
 
-SYSTEM_PROMPT = "你是简洁助手，用中文回答。"
+_CORE_SYSTEM_PROMPT = "你是简洁助手，用中文回答。"
 
 _chat_lock = threading.Lock()
 _chat_sessions: dict[str, tuple[list[BaseMessage], ContentManager]] = {}
@@ -88,7 +89,11 @@ def _session_for_chat(chat_id: str) -> tuple[list[BaseMessage], ContentManager]:
         entry = _chat_sessions.get(chat_id)
         if entry is None:
             manager = ContentManager()
-            msgs: list[BaseMessage] = [SystemMessage(content=SYSTEM_PROMPT)]
+            msgs: list[BaseMessage] = [
+                SystemMessage(
+                    content=build_system_prompt_with_memory(_CORE_SYSTEM_PROMPT)
+                ),
+            ]
             manager.persist(msgs)
             _chat_sessions[chat_id] = (msgs, manager)
             return msgs, manager

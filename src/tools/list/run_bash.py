@@ -4,8 +4,6 @@ import subprocess
 
 from mcp.server.fastmcp import FastMCP
 
-_TIMEOUT_SECONDS = 30
-
 
 def register(mcp: FastMCP) -> set[str]:
     @mcp.tool()
@@ -22,18 +20,13 @@ def register(mcp: FastMCP) -> set[str]:
         - "echo hello | wc -c"
         - "find . -name '*.py' | head -5"
 
-        限制：单次命令 30 秒超时；stderr 和非零退出码不会导致工具调用失败，
-        但会原样返回以便判断命令是否成功。
+        stderr 和非零退出码不会导致工具调用失败，但会原样返回以便判断命令是否成功。
         """
-        try:
-            result = subprocess.run(
-                ["bash", "-c", "--", command],
-                capture_output=True,
-                text=True,
-                timeout=_TIMEOUT_SECONDS,
-            )
-        except subprocess.TimeoutExpired:
-            return f"Error: command timed out after {_TIMEOUT_SECONDS}s"
+        result = subprocess.run(
+            ["bash", "-c", "--", command],
+            capture_output=True,
+            text=True,
+        )
 
         parts = []
         if result.stdout:

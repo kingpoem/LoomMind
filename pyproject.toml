@@ -13,6 +13,7 @@ dependencies = [
     "python-socks[asyncio]>=2.4.0",
     "tiktoken>=0.12.0",
     "mcp[cli]>=1.27.0",
+    "pyratatui>=0.2.8",
 ]
 
 [dependency-groups]
@@ -41,4 +42,4 @@ select = [
 ignore = []
 
 [tool.ruff.lint.isort]
-known-first-party = ["api", "cli", "context", "graph_agent", "lark", "parser"]
+known-first-party = ["api", "cli", "context", "graph_agent", "lark", "memory", "parser", "planning"]

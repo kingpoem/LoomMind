@@ -1,4 +1,4 @@
-"""raw JSON 转 content 下 user:/ai: 文本；供 export_log_txt 与批处理调用。"""
+"""raw JSON 转 content 下 system:/user:/ai: 文本；供 export_log_txt 与批处理调用。"""
 
 import json
 from pathlib import Path
@@ -10,7 +10,7 @@ def _default_log_root() -> Path:
 
 
 def lines_from_stored_messages(messages: list[dict[str, Any]]) -> list[str]:
-    """从持久化消息列表中提取 user/ai 行（不含 system）。"""
+    """从持久化消息列表中提取 system / user / ai 行。"""
     lines: list[str] = []
     for m in messages:
         mtype = m.get("type")
@@ -25,7 +25,9 @@ def lines_from_stored_messages(messages: list[dict[str, Any]]) -> list[str]:
             content = "".join(parts)
         elif not isinstance(content, str):
             content = str(content)
-        if mtype == "human":
+        if mtype == "system":
+            lines.append(f"system: {content}")
+        elif mtype == "human":
             lines.append(f"user: {content}")
         elif mtype == "ai":
             lines.append(f"ai: {content}")

@@ -55,29 +55,33 @@ def compass_compress(
     messages: list[BaseMessage],
     *,
     keep_last: int = _DEFAULT_KEEP_LAST,
-) -> tuple[list[BaseMessage], str]:
+) -> tuple[list[BaseMessage], str, str | None]:
     """压缩 system 之后的早期轮次，保留最近 keep_last 条消息。
 
-    返回 (新消息列表, 状态说明)。
+    返回 (新消息列表, 状态说明, 当次摘要文本或 None；摘要可供写入 memory)。
     """
     if not messages:
-        return messages, "当前无消息。"
+        return messages, "当前无消息。", None
 
     first = messages[0]
     if not isinstance(first, SystemMessage):
-        return messages, "首条不是系统消息，已跳过压缩。"
+        return messages, "首条不是系统消息，已跳过压缩。", None
 
     rest = messages[1:]
     if len(rest) <= keep_last:
-        return messages, "近期消息不多，无需压缩。"
+        return messages, "近期消息不多，无需压缩。", None
 
     old = rest[:-keep_last]
     recent = rest[-keep_last:]
     summary = _summarize_slice(old)
     if not summary:
-        return messages, "摘要为空，未修改历史。"
+        return messages, "摘要为空，未修改历史。", None
 
     merged = SystemMessage(
         content=first.content + "\n\n【较早对话摘要】\n" + summary,
     )
-    return [merged, *recent], "已压缩早期会话并合并到系统提示。"
+    return (
+        [merged, *recent],
+        "已压缩早期会话并合并到系统提示。",
+        summary,
+    )
