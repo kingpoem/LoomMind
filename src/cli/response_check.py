@@ -1,4 +1,4 @@
-"""本地 CLI：检测用户输入或模型回答中的控制指令（exit / log）。"""
+"""本地 CLI：检测用户输入控制指令。"""
 
 from enum import Enum
 
@@ -8,7 +8,7 @@ class ResponseAction(Enum):
 
     NORMAL = "normal"
     EXIT = "exit"
-    LOG = "log"
+    COMPASS = "compass"
 
 
 def _normalize_control_text(text: str) -> str:
@@ -16,10 +16,10 @@ def _normalize_control_text(text: str) -> str:
 
 
 def detect_reply_command(text: str) -> ResponseAction:
-    """若整段文本在去空白并小写后恰好为 exit 或 log，则返回对应动作。"""
+    """若整段文本在去空白并小写后恰好为控制指令，则返回对应动作。"""
     key = _normalize_control_text(text)
     if key == "exit":
         return ResponseAction.EXIT
-    if key == "log":
-        return ResponseAction.LOG
+    if key == "compass":
+        return ResponseAction.COMPASS
     return ResponseAction.NORMAL

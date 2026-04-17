@@ -1,6 +1,4 @@
-"""会话上下文 token 估算（用于终端显示与上限校验）。"""
-
-from __future__ import annotations
+"""会话上下文 token 估算"""
 
 import json
 from functools import lru_cache

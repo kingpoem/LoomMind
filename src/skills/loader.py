@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 """从本地 JSON “声明库”动态加载 Skills（LangChain Tools）。
 
 设计目标：
@@ -111,4 +109,3 @@ def load_all_skills(config_path: str | Path | None = None) -> list[StructuredToo
         tools.append(tool)
 
     return tools
-
