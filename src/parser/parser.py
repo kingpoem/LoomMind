@@ -12,12 +12,6 @@ def build_parser() -> argparse.ArgumentParser:
         description="LoomMind：LangGraph + 飞书（用户身份发消息）"
     )
 
-    parser.add_argument(
-        "--list-skills",
-        action="store_true",
-        help="打印已接入的 skills 名字清单并退出",
-    )
-
     mode = parser.add_mutually_exclusive_group(required=True)
     mode.add_argument(
         "--lark",

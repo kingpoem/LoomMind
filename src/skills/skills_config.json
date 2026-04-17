@@ -1,2 +1,13 @@
-[]
+[
+  {
+    "name": "pdf_info",
+    "description": "读取本地 PDF 的基础信息：页数与元数据（标题/作者等）。参数：path=PDF文件路径。",
+    "handler": "pdf_info"
+  },
+  {
+    "name": "pdf_to_text",
+    "description": "从本地 PDF 提取文本（默认最多前 10 页）。参数：path=PDF文件路径，max_pages=最大页数(可选)。",
+    "handler": "pdf_to_text"
+  }
+]
 
