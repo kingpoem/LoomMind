@@ -2,7 +2,7 @@
 
 from langchain_core.messages import AIMessage, BaseMessage, HumanMessage, SystemMessage
 
-from graph_agent import build_graph
+from api import create_chat_model
 
 from .content_manager import ContentManager
 from .response_check import ResponseAction, detect_reply_command
@@ -16,7 +16,7 @@ def run_local_demo() -> None:
     用户输入或模型整段回复经去空白、小写后恰好为 exit 或 log 时，
     结束会话或打印当前对话 JSON 并写入 log/raw/。
     """
-    app = build_graph()
+    model = create_chat_model()
     manager = ContentManager()
     messages: list[BaseMessage] = [SystemMessage(content=_SYSTEM_PROMPT)]
     manager.persist(messages)
@@ -43,22 +43,22 @@ def run_local_demo() -> None:
 
             messages.append(HumanMessage(content=user_text))
             try:
-                result = app.invoke({"messages": messages})
+                print("助手: ", end="", flush=True)
+                parts: list[str] = []
+                for chunk in model.stream(messages):
+                    piece = chunk.content
+                    if not piece:
+                        continue
+                    text = piece if isinstance(piece, str) else str(piece)
+                    if text:
+                        print(text, end="", flush=True)
+                        parts.append(text)
+                print()
+                assistant_text = "".join(parts)
             except Exception:
                 manager.persist(messages)
                 raise
-            messages = list(result["messages"])
-
-            last = messages[-1]
-            if not isinstance(last, AIMessage):
-                print(last)
-                manager.persist(messages)
-                continue
-
-            assistant_text = (
-                last.content if isinstance(last.content, str) else str(last.content)
-            )
-            print(f"助手: {assistant_text}")
+            messages.append(AIMessage(content=assistant_text))
 
             assistant_action = detect_reply_command(assistant_text)
             manager.persist(messages)
