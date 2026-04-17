@@ -1,4 +1,4 @@
-.PHONY: run clean format lint log
+.PHONY: run clean format lint log graph
 
 run:
 	uv run python src/main.py --cli
@@ -12,6 +12,9 @@ lint:
 
 log:
 	uv run python scripts/export_log_txt.py
+
+graph:
+	uv run python scripts/export_langgraph_mermaid.py
 
 clean:
 	rm -rf .ruff_cache
