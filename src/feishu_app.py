@@ -7,7 +7,7 @@ import threading
 from typing import Any
 
 from dotenv import load_dotenv
-from langchain_core.messages import AIMessage, HumanMessage, SystemMessage
+from langchain_core.messages import AIMessage, BaseMessage, HumanMessage, SystemMessage
 from lark_oapi import Client
 from lark_oapi.api.im.v1.model.create_message_request import CreateMessageRequest
 from lark_oapi.api.im.v1.model.create_message_request_body import (
@@ -20,11 +20,15 @@ from lark_oapi.event.custom import CustomizedEvent
 from lark_oapi.event.dispatcher_handler import EventDispatcherHandler
 from lark_oapi.ws.client import Client as WSClient
 
+from context.content_manager import ContentManager
 from graph_agent import build_graph
 
 logger = logging.getLogger(__name__)
 
 SYSTEM_PROMPT = "你是简洁助手，用中文回答。"
+
+_chat_lock = threading.Lock()
+_chat_sessions: dict[str, tuple[list[BaseMessage], ContentManager]] = {}
 
 
 def _env(name: str, *, required: bool = True) -> str:
@@ -79,16 +83,29 @@ def _sender_open_id(sender: Any) -> str | None:
     return getattr(sid, "open_id", None)
 
 
-def _reply_text_from_graph(graph, user_text: str) -> str:
-    result = graph.invoke(
-        {
-            "messages": [
-                SystemMessage(content=SYSTEM_PROMPT),
-                HumanMessage(content=user_text),
-            ]
-        }
-    )
-    last = result["messages"][-1]
+def _session_for_chat(chat_id: str) -> tuple[list[BaseMessage], ContentManager]:
+    with _chat_lock:
+        entry = _chat_sessions.get(chat_id)
+        if entry is None:
+            manager = ContentManager()
+            msgs: list[BaseMessage] = [SystemMessage(content=SYSTEM_PROMPT)]
+            manager.persist(msgs)
+            _chat_sessions[chat_id] = (msgs, manager)
+            return msgs, manager
+        return entry
+
+
+def _reply_text_from_graph(graph, chat_id: str, user_text: str) -> str:
+    messages, manager = _session_for_chat(chat_id)
+    messages.append(HumanMessage(content=user_text))
+    try:
+        result = graph.invoke({"messages": messages})
+    except Exception:
+        manager.persist(messages)
+        raise
+    messages[:] = list(result["messages"])
+    manager.persist(messages)
+    last = messages[-1]
     if isinstance(last, AIMessage):
         c = last.content
         return c if isinstance(c, str) else str(c)
@@ -142,7 +159,7 @@ def _process_incoming(
         if not text:
             logger.info("跳过非文本或空消息")
             return
-        reply = _reply_text_from_graph(graph, text)
+        reply = _reply_text_from_graph(graph, chat_id, text)
         if not reply:
             return
         if not user_access_token:

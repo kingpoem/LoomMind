@@ -40,46 +40,52 @@ def run_local_demo() -> None:
     app = build_graph()
     manager = ContentManager()
     messages: list[BaseMessage] = [SystemMessage(content="你是简洁助手，用中文回答。")]
+    manager.persist(messages)
 
     print(
         "多轮问答。输入 exit 结束；输入 log 打印当前全部对话 JSON（并写入 log/raw/）。"
     )
-    while True:
-        try:
-            user_text = input("你: ").strip()
-        except EOFError:
+    try:
+        while True:
+            try:
+                user_text = input("你: ").strip()
+            except EOFError:
+                break
+            if not user_text:
+                continue
+
+            user_action = detect_reply_command(user_text)
+            if user_action is ResponseAction.EXIT:
+                break
+            if user_action is ResponseAction.LOG:
+                print(manager.dumps_session(messages))
+                manager.persist(messages)
+                continue
+
+            messages.append(HumanMessage(content=user_text))
+            try:
+                result = app.invoke({"messages": messages})
+            except Exception:
+                manager.persist(messages)
+                raise
+            messages = list(result["messages"])
+
+            last = messages[-1]
+            if not isinstance(last, AIMessage):
+                print(last)
+                manager.persist(messages)
+                continue
+
+            assistant_text = (
+                last.content if isinstance(last.content, str) else str(last.content)
+            )
+            print(f"助手: {assistant_text}")
+
+            assistant_action = detect_reply_command(assistant_text)
             manager.persist(messages)
-            break
-        if not user_text:
-            continue
-
-        user_action = detect_reply_command(user_text)
-        if user_action is ResponseAction.EXIT:
-            manager.persist(messages)
-            break
-        if user_action is ResponseAction.LOG:
-            print(manager.dumps_session(messages))
-            manager.persist(messages)
-            continue
-
-        messages.append(HumanMessage(content=user_text))
-        result = app.invoke({"messages": messages})
-        messages = list(result["messages"])
-
-        last = messages[-1]
-        if not isinstance(last, AIMessage):
-            print(last)
-            manager.persist(messages)
-            continue
-
-        assistant_text = (
-            last.content if isinstance(last.content, str) else str(last.content)
-        )
-        print(f"助手: {assistant_text}")
-
-        assistant_action = detect_reply_command(assistant_text)
+            if assistant_action is ResponseAction.EXIT:
+                break
+            if assistant_action is ResponseAction.LOG:
+                print(manager.dumps_session(messages))
+    finally:
         manager.persist(messages)
-        if assistant_action is ResponseAction.EXIT:
-            break
-        if assistant_action is ResponseAction.LOG:
-            print(manager.dumps_session(messages))

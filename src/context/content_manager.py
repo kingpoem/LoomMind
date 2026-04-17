@@ -1,4 +1,4 @@
-"""会话 JSON 写入 log/raw/。导出纯文本见 scripts/export_log_txt.py。"""
+"""会话 JSON 写入 log/raw/，并同步 user/ai 文本至 log/content/。"""
 
 import json
 from datetime import UTC, datetime
@@ -7,6 +7,8 @@ from typing import Any
 from uuid import uuid4
 
 from langchain_core.messages import BaseMessage
+
+from .content_export import sync_raw_json_to_content_txt
 
 
 def _repo_root() -> Path:
@@ -23,6 +25,8 @@ class ContentManager:
         self.session_id = (
             datetime.now(UTC).strftime("%Y%m%dT%H%M%S") + f"_{uuid4().hex[:8]}"
         )
+        self.raw_dir.mkdir(parents=True, exist_ok=True)
+        (self.log_root / "content").mkdir(parents=True, exist_ok=True)
 
     def session_payload(self, messages: list[BaseMessage]) -> dict[str, Any]:
         return {
@@ -40,4 +44,5 @@ class ContentManager:
         self.raw_dir.mkdir(parents=True, exist_ok=True)
         path = self.raw_dir / f"{self.session_id}.json"
         path.write_text(self.dumps_session(messages), encoding="utf-8")
+        sync_raw_json_to_content_txt(path, log_root=self.log_root)
         return path
