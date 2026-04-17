@@ -15,7 +15,7 @@ def main() -> int:
     cmd = sys.argv[1]
     try:
         result = subprocess.run(
-            cmd,
+            "bash -c -- " + cmd,
             shell=True,
             capture_output=True,
             text=True,
