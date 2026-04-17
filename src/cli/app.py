@@ -1,6 +1,7 @@
 """本地终端多轮对话入口（流式输出，支持工具调用）。"""
 
 from langchain_core.messages import (
+    AIMessage,
     AIMessageChunk,
     BaseMessage,
     HumanMessage,
@@ -69,6 +70,12 @@ def run_cli() -> None:
                 assistant_text = "".join(parts)
                 if final_state is not None:
                     messages = list(final_state["messages"])
+                    if not assistant_text and messages:
+                        last = messages[-1]
+                        if isinstance(last, AIMessage) and isinstance(last.content, str):
+                            assistant_text = last.content
+                            if assistant_text:
+                                print(assistant_text)
             except Exception:
                 manager.persist(messages)
                 raise
