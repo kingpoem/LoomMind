@@ -1,6 +1,7 @@
 """CLI 参数解析。
-uv run python src/main.py
-uv run python src/main.py --demo
+uv run python src/main.py              # 默认：飞书长连接（同 --lark）
+uv run python src/main.py --lark       # 在飞书中对话（长连接）
+uv run python src/main.py --cli        # 本地终端多轮对话
 uv run python src/main.py --help
 """
 
@@ -11,10 +12,16 @@ def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         description="LoomMind：LangGraph + 飞书（用户身份发消息）"
     )
-    parser.add_argument(
-        "--demo",
+    mode = parser.add_mutually_exclusive_group()
+    mode.add_argument(
+        "--lark",
         action="store_true",
-        help="仅在本地打印一条示例问答，不连接飞书",
+        help="启动飞书长连接，在飞书中对话",
+    )
+    mode.add_argument(
+        "--cli",
+        action="store_true",
+        help="在本地终端中进行多轮对话（不连接飞书）",
     )
     return parser
 

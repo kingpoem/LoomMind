@@ -1,5 +1,8 @@
 .cursor/
 
+# conversation logs (ContentManager)
+log/
+
 # API keys and local env
 .env
 .env.*

@@ -2,7 +2,7 @@
 
 from typing import Annotated, TypedDict
 
-from langchain_core.messages import AIMessage, HumanMessage, SystemMessage
+from langchain_core.messages import AIMessage, BaseMessage, HumanMessage, SystemMessage
 from langgraph.graph import END, START, StateGraph
 from langgraph.graph.message import add_messages
 
@@ -29,18 +29,55 @@ def build_graph():
 
 
 def run_local_demo() -> None:
-    """本地打印一条问答（不连接飞书）。"""
+    """本地多轮问答（不连接飞书）。
+
+    用户输入或模型整段回复经去空白、小写后恰好为 exit 或 log 时，
+    结束会话或打印当前对话 JSON 并写入 log/。
+    """
+    from context.content_manager import ContentManager
+    from context.response_check import ResponseAction, detect_reply_command
+
     app = build_graph()
-    result = app.invoke(
-        {
-            "messages": [
-                SystemMessage(content="你是简洁助手，用中文回答。"),
-                HumanMessage(content="用一句话说明 LangGraph 适合做什么。"),
-            ]
-        }
-    )
-    last = result["messages"][-1]
-    if isinstance(last, AIMessage):
-        print(last.content)
-    else:
-        print(last)
+    manager = ContentManager()
+    messages: list[BaseMessage] = [SystemMessage(content="你是简洁助手，用中文回答。")]
+
+    print("多轮问答。输入 exit 结束；输入 log 打印当前全部对话 JSON（并写入 log/）。")
+    while True:
+        try:
+            user_text = input("你: ").strip()
+        except EOFError:
+            manager.persist(messages)
+            break
+        if not user_text:
+            continue
+
+        user_action = detect_reply_command(user_text)
+        if user_action is ResponseAction.EXIT:
+            manager.persist(messages)
+            break
+        if user_action is ResponseAction.LOG:
+            print(manager.dumps_session(messages))
+            manager.persist(messages)
+            continue
+
+        messages.append(HumanMessage(content=user_text))
+        result = app.invoke({"messages": messages})
+        messages = list(result["messages"])
+
+        last = messages[-1]
+        if not isinstance(last, AIMessage):
+            print(last)
+            manager.persist(messages)
+            continue
+
+        assistant_text = (
+            last.content if isinstance(last.content, str) else str(last.content)
+        )
+        print(f"助手: {assistant_text}")
+
+        assistant_action = detect_reply_command(assistant_text)
+        manager.persist(messages)
+        if assistant_action is ResponseAction.EXIT:
+            break
+        if assistant_action is ResponseAction.LOG:
+            print(manager.dumps_session(messages))

@@ -39,4 +39,4 @@ select = [
 ignore = []
 
 [tool.ruff.lint.isort]
-known-first-party = ["api", "graph_agent", "feishu_app", "parser"]
+known-first-party = ["api", "context", "graph_agent", "feishu_app", "parser"]
