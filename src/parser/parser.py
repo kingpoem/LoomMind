@@ -15,13 +15,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--list-skills",
         action="store_true",
-        help="启动前打印已接入的 skills/tools 清单并退出",
-    )
-    parser.add_argument(
-        "--verify-banned",
-        metavar="TEXT",
-        default=None,
-        help="用给定 TEXT 调用 check_banned_words 做一次验证并退出",
+        help="打印已接入的 skills 名字清单并退出",
     )
 
     mode = parser.add_mutually_exclusive_group(required=True)

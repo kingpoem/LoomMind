@@ -2,14 +2,13 @@
 
 from typing import Annotated, TypedDict
 
-from langchain_core.messages import AIMessage, HumanMessage
+from langchain_core.messages import AIMessage
 from langgraph.graph import END, START, StateGraph
 from langgraph.graph.message import add_messages
 from langgraph.prebuilt import ToolNode
 
 from api import create_chat_model
 from skills import load_all_skills
-from skills.business_funcs import check_banned_words
 from tools.loader import load_tools
 
 
@@ -25,10 +24,6 @@ def build_graph():
         model = model.bind_tools(tools)
 
     def agent(state: AgentState) -> dict:
-        last = state["messages"][-1] if state.get("messages") else None
-        if isinstance(last, HumanMessage) and isinstance(last.content, str):
-            if check_banned_words(last.content):
-                return {"messages": [AIMessage(content="让我们换个话题")]}
         reply: AIMessage = model.invoke(state["messages"])
         return {"messages": [reply]}
 
