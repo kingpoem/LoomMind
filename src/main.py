@@ -2,7 +2,7 @@
 
 from dotenv import load_dotenv
 
-from context import run_local_demo
+from cli import run_cli
 from lark import run_feishu_long_connection
 from parser import parse_args
 
@@ -14,7 +14,7 @@ def main() -> None:
         run_feishu_long_connection()
         return
 
-    run_local_demo()
+    run_cli()
 
 
 if __name__ == "__main__":

@@ -1,16 +1,16 @@
-"""本地终端多轮对话（CLI）。"""
+"""本地终端多轮对话入口（流式输出）。"""
 
 from langchain_core.messages import AIMessage, BaseMessage, HumanMessage, SystemMessage
 
 from api import create_chat_model
+from context import ContentManager
 
-from .content_manager import ContentManager
 from .response_check import ResponseAction, detect_reply_command
 
 _SYSTEM_PROMPT = "你是简洁助手，用中文回答。"
 
 
-def run_local_demo() -> None:
+def run_cli() -> None:
     """本地多轮问答（不连接飞书）。
 
     用户输入或模型整段回复经去空白、小写后恰好为 exit 或 log 时，

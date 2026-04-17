@@ -39,4 +39,4 @@ select = [
 ignore = []
 
 [tool.ruff.lint.isort]
-known-first-party = ["api", "context", "graph_agent", "lark", "parser"]
+known-first-party = ["api", "cli", "context", "graph_agent", "lark", "parser"]
