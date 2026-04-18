@@ -1,4 +1,6 @@
 .cursor/
+docs/
+doc/
 
 # 本地记忆文件（默认由 template/*.tmpl 首次复制生成）
 memory/*

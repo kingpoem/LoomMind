@@ -24,7 +24,12 @@ from api.runtime_settings import LLMRuntimeSettings
 from context import ContentManager
 from context.compass import compass_compress
 from context.token_budget import TOKEN_CONTEXT_LIMIT, count_messages_tokens
-from graph_agent import build_graph, list_available_mcps, list_available_skills
+from graph_agent import (
+    build_session_graph,
+    list_available_mcps,
+    list_available_skills,
+    session_graph_entry_mode,
+)
 from memory import build_system_prompt_with_memory, record_compass_digest
 from planning import resolve_planning_max_cycles
 from tools.loader import set_confirmation_callback, set_notification_callback
@@ -72,7 +77,7 @@ def run_cli() -> None:
     /exit、/quit 结束；/compass 压缩早期会话（摘要写入系统提示）。
     """
     trust.prompt_for_trust(_tty_trust_prompt)
-    app = build_graph()
+    app = build_session_graph()
     manager = ContentManager()
     messages: list[BaseMessage] = [
         SystemMessage(content=build_system_prompt_with_memory(_CORE_SYSTEM_PROMPT)),
@@ -80,6 +85,11 @@ def run_cli() -> None:
     manager.persist(messages)
 
     print("/exit、/quit 结束; /compass 手动压缩会话")
+    print(
+        "编排：默认启用 triage+分支；"
+        "设 LOOMMIND_ORCHESTRATION=legacy 可退回旧版单图。",
+        flush=True,
+    )
     try:
         while True:
             try:
@@ -188,7 +198,7 @@ class _Session:
         self.graph = self._build()
 
     def _build(self):
-        return build_graph(
+        return build_session_graph(
             model_name=self.model_name,
             enabled_skills=sorted(self.enabled_skills),
             enabled_mcps=sorted(self.enabled_mcps),
@@ -362,6 +372,8 @@ def run_cli_stdio() -> None:
             "model": session.model_name,
             "llm_provider": session.llm.effective_provider().value,
             "max_plan_cycles": resolve_planning_max_cycles(session.max_plan_cycles),
+            # 与 CLI 打印、`LOOMMIND_ORCHESTRATION` 一致；TUI 可展示当前走编排层或旧单图
+            "orchestration": session_graph_entry_mode(),
         }
     )
     try:

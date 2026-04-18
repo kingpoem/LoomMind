@@ -22,7 +22,7 @@ from lark_oapi.ws.client import Client as WSClient
 
 import trust
 from context.content_manager import ContentManager
-from graph_agent import build_graph
+from graph_agent import build_session_graph, session_graph_entry_mode
 from memory import build_system_prompt_with_memory
 
 logger = logging.getLogger(__name__)
@@ -281,7 +281,11 @@ def run_feishu_long_connection() -> None:
     encrypt_key = os.environ.get("FEISHU_ENCRYPT_KEY", "").strip()
     self_open_id = os.environ.get("FEISHU_USER_OPEN_ID", "").strip() or None
 
-    graph = build_graph()
+    graph = build_session_graph()
+    logger.info(
+        "会话图入口: %s（LOOMMIND_ORCHESTRATION 与 CLI/stdio 相同；legacy=旧单图）",
+        session_graph_entry_mode(),
+    )
     client = (
         Client.builder()
         .app_id(app_id)

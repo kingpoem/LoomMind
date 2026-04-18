@@ -1,6 +1,8 @@
 """LangGraph Agent：接入 planning 循环与工具调用。"""
 
+import os
 from collections.abc import Iterable
+from typing import Literal
 
 from langchain_core.tools import BaseTool
 
@@ -51,4 +53,51 @@ def build_graph(
         tools=tools,
         max_cycles=resolve_planning_max_cycles(max_cycles),
         llm_settings=llm_settings,
+    )
+
+
+def session_graph_entry_mode() -> Literal["orchestration", "legacy"]:
+    """与 `build_session_graph` 一致：当前进程将使用的入口图类型（供 CLI/stdio/飞书展示）。"""
+    from orchestration.config import use_legacy_planning_graph
+
+    return "legacy" if use_legacy_planning_graph() else "orchestration"
+
+
+def _max_review_reject_retries() -> int:
+    raw = os.environ.get("LOOMMIND_MAX_REVIEW_REJECT_RETRIES", "").strip()
+    if not raw:
+        return 2
+    try:
+        return max(0, int(raw))
+    except ValueError:
+        return 2
+
+
+def build_session_graph(
+    *,
+    model_name: str | None = None,
+    enabled_skills: Iterable[str] | None = None,
+    enabled_mcps: Iterable[str] | None = None,
+    max_cycles: int | None = None,
+):
+    """CLI / stdio / 飞书入口使用的图：默认走编排层，旧版单图见环境变量说明。
+
+    `LOOMMIND_ORCHESTRATION=legacy`（等）时使用 `build_graph()`；
+    否则使用 `orchestration.build_orchestration_graph()`。
+    """
+    from orchestration import build_orchestration_graph, use_legacy_planning_graph
+
+    if use_legacy_planning_graph():
+        return build_graph(
+            model_name=model_name,
+            enabled_skills=enabled_skills,
+            enabled_mcps=enabled_mcps,
+            max_cycles=max_cycles,
+        )
+    return build_orchestration_graph(
+        model_name=model_name,
+        enabled_skills=enabled_skills,
+        enabled_mcps=enabled_mcps,
+        max_cycles=max_cycles,
+        max_review_reject_retries=_max_review_reject_retries(),
     )
