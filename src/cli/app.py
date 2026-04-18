@@ -15,17 +15,19 @@ from langchain_core.messages import (
     SystemMessage,
 )
 
+import trust
 from api import default_model_name, list_available_models
 from context import ContentManager
 from context.compass import compass_compress
 from context.token_budget import TOKEN_CONTEXT_LIMIT, count_messages_tokens
 from graph_agent import build_graph, list_available_mcps, list_available_skills
 from memory import build_system_prompt_with_memory, record_compass_digest
-from tools.loader import set_confirmation_callback
+from tools.loader import set_confirmation_callback, set_notification_callback
 
 from .response_check import ResponseAction, detect_reply_command
-from .stdio_confirm import stdio_tool_confirm
+from .stdio_confirm import stdio_tool_confirm, stdio_tool_notify
 from .stdio_protocol import emit, read_command_line
+from .stdio_trust import stdio_trust_prompt
 
 _CORE_SYSTEM_PROMPT = "你是简洁助手，用中文回答。回答格式扁平化，段落化"
 
@@ -48,11 +50,21 @@ def _run_make_log(*, silence: bool = False) -> None:
         subprocess.run(["make", "log"], cwd=root, check=False)
 
 
+def _tty_trust_prompt(workspace: Path) -> bool:
+    """CLI 启动时询问工作区信任；非 tty 一律按不信任处理。"""
+    if not sys.stdin.isatty():
+        return False
+    print(f"是否信任 AI 访问当前工作区 {workspace}？")
+    ans = input("这将允许AI不经过你的同意读取该目录下的文件。[y/N] ").strip().lower()
+    return ans in ("y", "yes")
+
+
 def run_cli() -> None:
     """本地多轮问答（不连接飞书），支持工具调用。
 
     /exit、/quit 结束；/compass 压缩早期会话（摘要写入系统提示）。
     """
+    trust.prompt_for_trust(_tty_trust_prompt)
     app = build_graph()
     manager = ContentManager()
     messages: list[BaseMessage] = [
@@ -232,6 +244,9 @@ def _emit_mcps(session: _Session) -> None:
 def run_cli_stdio() -> None:
     """与 `run_cli` 相同业务逻辑，经 stdin/stdout NDJSON 与 TUI 通信。"""
     set_confirmation_callback(stdio_tool_confirm)
+    set_notification_callback(stdio_tool_notify)
+    # 信任询问先于 ready：TUI 在收到 ready 前用 overlay 阻塞输入。
+    trust.prompt_for_trust(stdio_trust_prompt)
     session = _Session()
     manager = ContentManager()
     messages: list[BaseMessage] = [

@@ -8,7 +8,9 @@ use crate::theme::constants::{COMPOSER_HEIGHT, POPUP_AREA_HEIGHT, SPINNER_FRAMES
 use crate::theme::palette;
 use crate::util::{directory_line, truncate_left_to_width, truncate_to_width};
 use crate::view::history::render_buffer_line;
-use crate::view::popup::{render_selector, render_slash_popup, render_tool_approval, SlashPopup};
+use crate::view::popup::{
+    render_selector, render_slash_popup, render_tool_approval, render_trust_approval, SlashPopup,
+};
 
 pub fn draw_inline(frame: &mut Frame, app: &App) {
     let area = frame.area();
@@ -26,6 +28,7 @@ pub fn draw_inline(frame: &mut Frame, app: &App) {
     match &app.overlay {
         Overlay::Selector(sel) => render_selector(frame, chunks[1], sel),
         Overlay::Approval(req) => render_tool_approval(frame, chunks[1], req),
+        Overlay::Trust(req) => render_trust_approval(frame, chunks[1], req),
         Overlay::None if SlashPopup::is_active(&app.input) => {
             render_slash_popup(frame, chunks[1], &app.input, &app.popup);
         }

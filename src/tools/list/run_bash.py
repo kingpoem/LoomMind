@@ -4,8 +4,10 @@ import subprocess
 
 from mcp.server.fastmcp import FastMCP
 
+from trust import TrustCategory
 
-def register(mcp: FastMCP) -> set[str]:
+
+def register(mcp: FastMCP) -> dict[str, TrustCategory]:
     @mcp.tool()
     def run_bash(command: str) -> str:
         """在本机的 bash shell 中执行命令，返回 stdout、stderr 和退出码。
@@ -36,4 +38,5 @@ def register(mcp: FastMCP) -> set[str]:
         parts.append(f"exit_code: {result.returncode}")
         return "\n\n".join(parts)
 
-    return {"run_bash"}
+    # EXEC 类别：信任态下也仍要人工确认。
+    return {"run_bash": TrustCategory.EXEC}

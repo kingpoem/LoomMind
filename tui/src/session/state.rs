@@ -1,7 +1,7 @@
 use std::time::Instant;
 
 use crate::theme::constants;
-use crate::view::popup::{Selector, SlashPopup, ToolApproval};
+use crate::view::popup::{Selector, SlashPopup, ToolApproval, TrustApproval};
 
 #[derive(Debug, PartialEq, Eq)]
 pub enum SessionState {
@@ -15,6 +15,7 @@ pub enum Overlay {
     None,
     Selector(Selector),
     Approval(ToolApproval),
+    Trust(TrustApproval),
 }
 
 impl Overlay {

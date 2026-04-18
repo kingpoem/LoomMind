@@ -20,6 +20,7 @@ from lark_oapi.event.custom import CustomizedEvent
 from lark_oapi.event.dispatcher_handler import EventDispatcherHandler
 from lark_oapi.ws.client import Client as WSClient
 
+import trust
 from context.content_manager import ContentManager
 from graph_agent import build_graph
 from memory import build_system_prompt_with_memory
@@ -270,6 +271,8 @@ def run_feishu_long_connection() -> None:
     """使用飞书事件长连接：需在开放平台将事件订阅方式配置为「长连接」。"""
     load_dotenv()
     logging.basicConfig(level=logging.INFO, format="%(levelname)s %(name)s %(message)s")
+    # 飞书是长驻 bot，没有启动时可交互的用户，显式禁用工作区信任态。
+    trust.set_trusted(False)
 
     app_id = _env("FEISHU_APP_ID")
     app_secret = _env("FEISHU_APP_SECRET")

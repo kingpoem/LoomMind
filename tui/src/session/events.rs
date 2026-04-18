@@ -9,9 +9,9 @@ use crate::child::{send_command, ChildEvent};
 use crate::session::input::{backspace, delete_forward, insert_char, move_left, move_right};
 use crate::session::state::{App, Overlay, SessionState};
 use crate::term::Term;
-use crate::util::normalize_inline_text;
+use crate::util::{normalize_inline_text, truncate_to_width};
 use crate::view::history::{insert_assistant, insert_error, insert_system, insert_user};
-use crate::view::popup::{Selector, SelectorKind, SlashPopup, ToolApproval};
+use crate::view::popup::{Selector, SelectorKind, SlashPopup, ToolApproval, TrustApproval};
 
 pub fn handle_child_event(term: &mut Term, app: &mut App, ev: ChildEvent) -> io::Result<()> {
     match ev {
@@ -120,6 +120,20 @@ pub fn handle_child_event(term: &mut Term, app: &mut App, ev: ChildEvent) -> io:
             app.overlay = Overlay::Approval(ToolApproval::new(id, tool.clone(), args, permissions));
             app.status = "等待工具授权…".into();
             insert_system(term, &format!("工具 {tool} 请求执行权限，请确认。"))?;
+        }
+        ChildEvent::ToolInvoked { tool, args } => {
+            // 先把正在缓冲的助手流内容落到历史，使系统行能按真实时间顺序出现。
+            if !app.assistant_buf.is_empty() {
+                let buf = std::mem::take(&mut app.assistant_buf);
+                insert_assistant(term, &buf)?;
+            }
+            let brief = truncate_to_width(&args, 60);
+            insert_system(term, &format!("正在使用工具 {tool}({brief})"))?;
+        }
+        ChildEvent::TrustRequest { workspace } => {
+            app.overlay = Overlay::Trust(TrustApproval::new(workspace.clone()));
+            app.status = "等待工作区信任决定…".into();
+            insert_system(term, &format!("请选择是否信任工作区：{workspace}"))?;
         }
     }
     Ok(())
@@ -237,6 +251,7 @@ fn handle_overlay_key(
     match &app.overlay {
         Overlay::Selector(_) => handle_selector_key(term, app, child_stdin, key),
         Overlay::Approval(_) => handle_approval_key(term, app, child_stdin, key),
+        Overlay::Trust(_) => handle_trust_key(term, app, child_stdin, key),
         Overlay::None => Ok(()),
     }
 }
@@ -343,6 +358,69 @@ fn handle_approval_key(
             return Ok(());
         }
         _ => {}
+    }
+    Ok(())
+}
+
+fn handle_trust_key(
+    term: &mut Term,
+    app: &mut App,
+    child_stdin: &mut ChildStdin,
+    key: KeyEvent,
+) -> io::Result<()> {
+    match (key.code, key.modifiers) {
+        (KeyCode::Left, _) => {
+            if let Overlay::Trust(req) = &mut app.overlay {
+                req.move_left();
+            }
+            return Ok(());
+        }
+        (KeyCode::Right, _) | (KeyCode::Tab, _) => {
+            if let Overlay::Trust(req) = &mut app.overlay {
+                req.move_right();
+            }
+            return Ok(());
+        }
+        (KeyCode::Char(' '), _) => {
+            if let Overlay::Trust(req) = &mut app.overlay {
+                req.toggle();
+            }
+            return Ok(());
+        }
+        (KeyCode::Esc, _) | (KeyCode::Char('c'), KeyModifiers::CONTROL) => {
+            submit_trust_response(term, app, child_stdin, false)?;
+            return Ok(());
+        }
+        (KeyCode::Enter, _) => {
+            let trusted = matches!(&app.overlay, Overlay::Trust(req) if req.trusted());
+            submit_trust_response(term, app, child_stdin, trusted)?;
+            return Ok(());
+        }
+        _ => {}
+    }
+    Ok(())
+}
+
+fn submit_trust_response(
+    term: &mut Term,
+    app: &mut App,
+    child_stdin: &mut ChildStdin,
+    trusted: bool,
+) -> io::Result<()> {
+    if !matches!(&app.overlay, Overlay::Trust(_)) {
+        return Ok(());
+    }
+    app.overlay = Overlay::None;
+    let _ = send_command(
+        child_stdin,
+        json!({"type": "trust_response", "trust": trusted}),
+    );
+    if trusted {
+        app.status = "已信任工作区".into();
+        insert_system(term, "已信任AI访问当前工作区。")?;
+    } else {
+        app.status = "未信任工作区".into();
+        insert_system(term, "未信任AI访问当前工作区。")?;
     }
     Ok(())
 }

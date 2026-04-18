@@ -140,6 +140,37 @@ pub enum SelectorKind {
 }
 
 #[derive(Debug)]
+pub struct TrustApproval {
+    pub workspace: String,
+    pub cursor: usize,
+}
+
+impl TrustApproval {
+    pub fn new(workspace: impl Into<String>) -> Self {
+        Self {
+            workspace: workspace.into(),
+            cursor: 1, // 默认焦点在「不信任」，回车即安全默认值
+        }
+    }
+
+    pub fn move_left(&mut self) {
+        self.cursor = 0;
+    }
+
+    pub fn move_right(&mut self) {
+        self.cursor = 1;
+    }
+
+    pub fn toggle(&mut self) {
+        self.cursor = if self.cursor == 0 { 1 } else { 0 };
+    }
+
+    pub fn trusted(&self) -> bool {
+        self.cursor == 0
+    }
+}
+
+#[derive(Debug)]
 pub struct ToolApproval {
     pub id: String,
     pub tool: String,
@@ -582,4 +613,75 @@ fn render_approval_actions(
 fn write_line(frame: &mut Frame, x: u16, y: u16, width: u16, text: &str, style: Style) {
     let line = Line::from(Span::styled(text.to_string(), style));
     crate::view::history::render_buffer_line(frame, y, &line, width, x);
+}
+
+pub fn render_trust_approval(frame: &mut Frame, area: Rect, approval: &TrustApproval) {
+    if area.height < 2 || area.width < 4 {
+        return;
+    }
+    let inner = render_block(frame, area, "工作区信任");
+    let base = Style::default()
+        .bg(palette::USER_BAR_BG)
+        .fg(palette::USER_BAR_FG);
+    let muted = base.fg(palette::SURFACE_MUTED);
+    let selected_style = base
+        .bg(palette::SURFACE_SELECTED_BG)
+        .add_modifier(Modifier::BOLD);
+
+    let prompt_line = "  是否信任 AI 访问当前工作区？".to_string();
+    let ws_line = format!("  路径: {}", approval.workspace);
+    let hint_effect = "  这将允许AI不经过你的同意读取该目录下的文件。".to_string();
+
+    let rows = [prompt_line, ws_line, hint_effect];
+    let mut y = inner.y;
+    for row in rows {
+        if y >= inner.y + inner.height {
+            break;
+        }
+        write_line(frame, inner.x, y, inner.width, &row, muted);
+        y += 1;
+    }
+
+    if y < inner.y + inner.height {
+        render_trust_actions(frame, inner, y, approval, base, selected_style);
+        y += 1;
+    }
+    if y < inner.y + inner.height {
+        write_line(
+            frame,
+            inner.x,
+            y,
+            inner.width,
+            "  ←/→ 切换 · Enter 确认 · Esc 拒绝",
+            muted,
+        );
+    }
+}
+
+fn render_trust_actions(
+    frame: &mut Frame,
+    area: Rect,
+    y: u16,
+    approval: &TrustApproval,
+    base: Style,
+    selected_style: Style,
+) {
+    let trust_style = if approval.trusted() {
+        selected_style
+    } else {
+        base
+    };
+    let deny_style = if approval.trusted() {
+        base
+    } else {
+        selected_style
+    };
+    let line = Line::from(vec![
+        Span::styled("  [", base),
+        Span::styled("信任", trust_style),
+        Span::styled("]   [", base),
+        Span::styled("不信任", deny_style),
+        Span::styled("]", base),
+    ]);
+    crate::view::history::render_buffer_line(frame, y, &line, area.width, area.x);
 }

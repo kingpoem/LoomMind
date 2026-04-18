@@ -1,55 +1,51 @@
-"""stdio 模式下工具确认：经 stdout 请求 TUI，再从 stdin 读回应。"""
+"""stdio 模式下工具交互：把确认请求与调用通知以 NDJSON 发给 TUI。"""
 
 import json
 import logging
 import uuid
-from collections.abc import Iterable
+
+from trust import TrustCategory
 
 from .stdio_protocol import emit, read_command_line
 
 logger = logging.getLogger(__name__)
 
-_TOOL_PERMISSION_HINTS: dict[str, tuple[str, ...]] = {
-    # run_bash 可直接访问本地文件系统，默认提示读写权限。
-    "run_bash": ("local_file_read", "local_file_write"),
+# 工具类别 → 给用户看的中文权限说明。取代旧的 per-tool 硬编码表，
+# 以 `tools/server.py :: tool_category` 登记的 TrustCategory 为唯一来源。
+_CATEGORY_HINTS: dict[TrustCategory, str] = {
+    TrustCategory.READ_FS: "读取本地文件",
+    TrustCategory.WRITE_FS: "写入本地文件",
+    TrustCategory.EXEC: "执行系统命令",
+    TrustCategory.NETWORK: "访问网络",
 }
 
 
-def _extract_permissions(tool_name: str, args: dict) -> list[str]:
-    permissions: list[str] = []
+def _permissions_for(tool_name: str) -> list[str]:
+    # 延迟导入：避免 cli 子模块在加载时强行把 tools.server 拉起来。
+    from tools.server import tool_category
 
-    required = args.get("required_permissions")
-    if isinstance(required, str):
-        permissions.append(required)
-    elif isinstance(required, Iterable):
-        for item in required:
-            if isinstance(item, str):
-                permissions.append(item)
+    cat = tool_category(tool_name)
+    if cat is None:
+        return []
+    hint = _CATEGORY_HINTS.get(cat)
+    return [hint] if hint else []
 
-    permissions.extend(_TOOL_PERMISSION_HINTS.get(tool_name, ()))
 
-    unique_permissions: list[str] = []
-    seen: set[str] = set()
-    for item in permissions:
-        perm = item.strip()
-        if not perm or perm in seen:
-            continue
-        seen.add(perm)
-        unique_permissions.append(perm)
-    return unique_permissions
+def _safe_args(args: dict) -> dict:
+    """把 args 转成可 JSON 序列化的形式；无法序列化的对象 fallback 为 str。"""
+    return json.loads(json.dumps(args, ensure_ascii=False, default=str))
 
 
 def stdio_tool_confirm(tool_name: str, args: dict) -> bool:
     req_id = uuid.uuid4().hex
-    safe_args = json.loads(json.dumps(args, default=str))
-    permissions = _extract_permissions(tool_name, safe_args)
+    safe_args = _safe_args(args)
     emit(
         {
             "type": "tool_confirm_request",
             "id": req_id,
             "tool": tool_name,
             "args": safe_args,
-            "permissions": permissions,
+            "permissions": _permissions_for(tool_name),
         }
     )
     while True:
@@ -64,3 +60,18 @@ def stdio_tool_confirm(tool_name: str, args: dict) -> bool:
         if cmd == "shutdown":
             return False
         logger.warning("等待工具确认时收到未处理指令: %s", cmd)
+
+
+def stdio_tool_notify(tool_name: str, args: dict) -> None:
+    """每次真正调用工具前发一条事件，让 TUI 向用户展示"正在使用工具 X"。
+
+    与 tool_confirm_request 互补：自动放行（信任态下的 READ_FS 等）或用户
+    刚点过"允许"的情况，都会触发这条通知。
+    """
+    emit(
+        {
+            "type": "tool_invoked",
+            "tool": tool_name,
+            "args": _safe_args(args),
+        }
+    )

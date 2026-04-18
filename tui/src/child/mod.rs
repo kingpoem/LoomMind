@@ -42,6 +42,13 @@ pub enum ChildEvent {
         args: String,
         permissions: Vec<String>,
     },
+    ToolInvoked {
+        tool: String,
+        args: String,
+    },
+    TrustRequest {
+        workspace: String,
+    },
 }
 
 pub fn locate_project_root() -> io::Result<PathBuf> {
@@ -206,6 +213,19 @@ fn parse_event(line: &str) -> Result<ChildEvent, String> {
                 permissions: str_array("permissions"),
             }
         }
+        "tool_invoked" => {
+            let args = value
+                .get("args")
+                .map(|v| serde_json::to_string(v).unwrap_or_else(|_| "{}".to_string()))
+                .unwrap_or_else(|| "{}".to_string());
+            ChildEvent::ToolInvoked {
+                tool: s("tool"),
+                args,
+            }
+        }
+        "trust_request" => ChildEvent::TrustRequest {
+            workspace: s("workspace"),
+        },
         other => ChildEvent::System(format!("未知事件 {other}: {line}")),
     })
 }
