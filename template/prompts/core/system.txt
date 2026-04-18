@@ -5,6 +5,12 @@
 - `workspace_ls`：等价 `ls -hal`，看目录下权限与条目；`path` 默认 `"."`（工作区根）。
 - `workspace_tree`：等价 `tree -L <depth>`，看目录树；`depth` 默认 3。无 `tree` 时需系统安装（如 `brew install tree`）。
 
+## 联网检索
+
+- `web_search`：按关键词联网搜索（DuckDuckGo）。需要**时效信息**、**可核实的事实**，或训练数据不足以可靠回答时调用。
+- `web_fetch`：对 **http(s) 完整 URL** 拉取页面正文摘要。用户消息里出现需打开的链接，或 `web_search` 返回的 URL 需读原文时调用。
+- 二者属外网访问，调用前通常需用户确认。
+
 ## 文件工具约定
 
 - `create_file`：仅新建（路径已存在则失败）；`write_file` 可新建或覆盖。

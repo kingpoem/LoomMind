@@ -19,7 +19,7 @@
 
 `short_term_memory` 在图状态里滚动保存本轮工具观察与失败提示，`long_term_memory` 条目来自 `planning_long_term.md`，在 `remember` 节点把结构化摘要追加到文件并回读最近若干条；文件侧有字符上限与裁剪，防止单文件无限膨胀。
 
-### Planning（规划）
+### Planning
 
 规划模块基于 LangGraph 实现有界 ReAct 模式，每条用户消息触发一次完整规划图运行。模型按 `thought → action → observation → next_step` 迭代，步数受 `max_cycles` 约束。依赖对话历史与 `memory/` 文件控制上下文。
 

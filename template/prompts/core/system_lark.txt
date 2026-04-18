@@ -4,6 +4,11 @@
 
 - `workspace_ls`：`ls -hal`；`workspace_tree`：`tree -L depth`（无 tree 需安装）。
 
+## 联网检索
+
+- `web_search`：关键词联网搜索；需时效或事实核对时调用。
+- `web_fetch`：对 http(s) URL 拉取正文摘要；用户给链接或需打开搜索结果时调用。
+
 ## 文件工具约定
 
 - `create_file` 仅新建；`delete_file` 删单文件；`write_file` 可新建或覆盖。
