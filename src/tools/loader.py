@@ -11,7 +11,7 @@ from mcp.types import TextContent
 
 import trust
 
-from .server import builtin_server, requires_confirmation
+from .server import builtin_server, requires_confirmation, tool_preview
 
 logger = logging.getLogger(__name__)
 
@@ -27,6 +27,17 @@ def _default_confirm(tool_name: str, args: dict) -> bool:
     print(f"\n[confirmation] LLM 想调用工具: {tool_name}")
     for k, v in args.items():
         print(f"  {k} = {v!r}")
+    fn = tool_preview(tool_name)
+    if fn is not None:
+        try:
+            preview = fn(args)
+        except Exception:
+            logger.exception("工具 %s 预览执行失败", tool_name)
+            preview = None
+        if isinstance(preview, str) and preview:
+            print("  --- Preview Start ---")
+            print(preview.rstrip())
+            print("  ---  Preview End  ---")
     ans = input("允许执行？[y/N] ").strip().lower()
     return ans in ("y", "yes")
 

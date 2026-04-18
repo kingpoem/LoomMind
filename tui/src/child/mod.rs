@@ -41,6 +41,7 @@ pub enum ChildEvent {
         tool: String,
         args: String,
         permissions: Vec<String>,
+        preview: Option<String>,
     },
     ToolInvoked {
         tool: String,
@@ -206,11 +207,16 @@ fn parse_event(line: &str) -> Result<ChildEvent, String> {
                 .get("args")
                 .map(|v| serde_json::to_string(v).unwrap_or_else(|_| "{}".to_string()))
                 .unwrap_or_else(|| "{}".to_string());
+            let preview = value
+                .get("preview")
+                .and_then(|v| v.as_str())
+                .map(String::from);
             ChildEvent::ToolConfirmRequest {
                 id: s("id"),
                 tool: s("tool"),
                 args,
                 permissions: str_array("permissions"),
+                preview,
             }
         }
         "tool_invoked" => {
