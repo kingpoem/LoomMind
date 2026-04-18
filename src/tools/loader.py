@@ -10,8 +10,10 @@ from langchain_core.tools import StructuredTool
 from mcp.types import TextContent
 
 import trust
+from settings import get
+from trust import TrustCategory
 
-from .server import builtin_server, requires_confirmation, tool_preview
+from .server import builtin_server, requires_confirmation, tool_category, tool_preview
 
 logger = logging.getLogger(__name__)
 
@@ -116,8 +118,20 @@ def load_tools() -> list[StructuredTool]:
         logger.exception("从 BuiltinServer 拉取工具列表失败")
         return []
 
+    raw_mode = get("tools.sandbox_mode", "workspace_write")
+    if isinstance(raw_mode, str):
+        mode = raw_mode.strip().lower()
+    else:
+        mode = "workspace_write"
+    if mode == "danger_full_access":
+        mode = "workspace_write"
+
     tools: list[StructuredTool] = []
     for t in mcp_tools:
+        if mode == "read_only":
+            cat = tool_category(t.name)
+            if cat in (TrustCategory.WRITE_FS, TrustCategory.EXEC):
+                continue
         try:
             tools.append(_make_tool(t.name, t.description or "", t.inputSchema))
         except Exception:

@@ -22,7 +22,7 @@
   },
   "planning": {
     "max_cycles": null,
-    "default_max_cycles": 6,
+    "default_max_cycles": 12,
     "max_cycles_cap": 64,
     "short_term_limit": 8,
     "trace_limit": 16,
@@ -44,5 +44,8 @@
   },
   "trust": {
     "trusted_paths": []
+  },
+  "tools": {
+    "sandbox_mode": "workspace_write"
   }
 }
