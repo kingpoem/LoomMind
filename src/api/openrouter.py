@@ -1,18 +1,31 @@
 # https://openrouter.ai/docs
 
-import os
-
 from langchain_openai import ChatOpenAI
 
-OPENROUTER_BASE_URL = "https://openrouter.ai/api/v1"
+from settings import get, get_str
 
-AVAILABLE_MODELS: list[str] = [
-    "deepseek/deepseek-chat",
-    "deepseek/deepseek-chat-v3.1",
-    "qwen/qwen3-30b-a3b",
-]
 
-DEFAULT_MODEL: str = AVAILABLE_MODELS[0]
+def openrouter_base_url() -> str:
+    return get_str("llm.openrouter.base_url", "https://openrouter.ai/api/v1")
+
+
+def available_models_list() -> list[str]:
+    v = get("llm.openrouter.available_models")
+    if isinstance(v, list) and v:
+        return [str(x) for x in v if isinstance(x, str)]
+    return [
+        "deepseek/deepseek-chat",
+        "deepseek/deepseek-chat-v3.1",
+        "qwen/qwen3-30b-a3b",
+    ]
+
+
+def default_openrouter_model() -> str:
+    m = get_str("llm.openrouter.default_model").strip()
+    if m:
+        return m
+    models = available_models_list()
+    return models[0] if models else "deepseek/deepseek-chat"
 
 
 def create_openrouter_chat_model(
@@ -21,10 +34,10 @@ def create_openrouter_chat_model(
     if api_key is not None and api_key.strip():
         key = api_key.strip()
     else:
-        key = os.environ.get("OPENROUTER_API_KEY", "").strip()
+        key = get_str("llm.openrouter.api_key").strip()
     return ChatOpenAI(
-        model=(model or DEFAULT_MODEL).strip(),
+        model=(model or default_openrouter_model()).strip(),
         openai_api_key=key,
-        openai_api_base=OPENROUTER_BASE_URL,
+        openai_api_base=openrouter_base_url(),
         temperature=0,
     )

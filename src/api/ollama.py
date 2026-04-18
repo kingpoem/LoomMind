@@ -3,22 +3,29 @@
 # https://github.com/ollama/ollama/blob/main/docs/openai.md
 
 import json
-import os
 import urllib.error
 import urllib.request
 
 from langchain_openai import ChatOpenAI
 
-DEFAULT_OLLAMA_BASE = "http://127.0.0.1:11434"
+from settings import get_str
+
+
+def _default_origin() -> str:
+    return get_str("llm.ollama.default_origin", "http://127.0.0.1:11434").rstrip("/")
+
+
+def _fallback_model() -> str:
+    return get_str("llm.ollama.fallback_model", "llama3.2")
 
 
 def normalized_openai_api_base(*, base_url_override: str | None = None) -> str:
     """供 ChatOpenAI 使用的 base，形如 http://host:11434/v1。"""
     raw = (base_url_override or "").strip().rstrip("/")
     if not raw:
-        raw = os.environ.get("OLLAMA_BASE_URL", "").strip().rstrip("/")
+        raw = get_str("llm.ollama.base_url").strip().rstrip("/")
     if not raw:
-        raw = f"{DEFAULT_OLLAMA_BASE}/v1"
+        raw = f"{_default_origin()}/v1"
     if not raw.lower().endswith("/v1"):
         raw = f"{raw}/v1"
     return raw
@@ -55,22 +62,23 @@ def fetch_ollama_model_names(
 
 def list_ollama_models(*, base_url_override: str | None = None) -> list[str]:
     names = fetch_ollama_model_names(base_url_override=base_url_override)
-    extra = os.environ.get("OLLAMA_MODEL", "").strip()
+    extra = get_str("llm.ollama.model").strip()
     if extra and extra not in names:
         names.insert(0, extra)
+    fb = _fallback_model()
     if not names:
-        names = [extra or "llama3.2"]
+        names = [extra or fb]
     return names
 
 
 def default_ollama_model(*, base_url_override: str | None = None) -> str:
-    explicit = os.environ.get("OLLAMA_MODEL", "").strip()
+    explicit = get_str("llm.ollama.model").strip()
     if explicit:
         return explicit
     found = fetch_ollama_model_names(base_url_override=base_url_override)
     if found:
         return found[0]
-    return "llama3.2"
+    return _fallback_model()
 
 
 def create_ollama_chat_model(
@@ -85,7 +93,9 @@ def create_ollama_chat_model(
     if api_key is not None and api_key.strip():
         use_key = api_key.strip()
     else:
-        use_key = os.environ.get("OLLAMA_API_KEY", "ollama").strip() or "ollama"
+        persisted = get_str("llm.ollama.api_key").strip()
+        placeholder = get_str("llm.ollama.api_key_placeholder", "ollama").strip()
+        use_key = persisted or placeholder or "ollama"
     return ChatOpenAI(
         model=resolved,
         openai_api_key=use_key,

@@ -4,7 +4,7 @@
 
 ## 长任务与规划（ReAct）
 
-- **单条用户消息**：规划图在一条消息内做多轮「思考 → 工具 → 观察」，轮数上限由 `max_cycles` 控制（默认 6，环境变量 `LOOMMIND_MAX_PLAN_CYCLES`，stdio 可发 `set_plan_cycles` 覆盖会话级设置）。
+- **单条用户消息**：规划图在一条消息内做多轮「思考 → 工具 → 观察」，轮数上限由 `max_cycles` 控制（默认与上限见 `settings.json` 的 `planning.*`，stdio 可发 `set_plan_cycles` 覆盖会话级设置）。
 - **更长流程**：提高 `max_cycles`，或拆成多条用户消息；子目标可由模型在首轮列出（编号/列表），并写入 `planning_long_term.md` 的条目中。
 - **上下文长度**：步数与 token 无必然同步上限；长对话请用 `/compass` 压缩早期轮次，并依赖本手册与 `memory_summary.md` 控制注入体积。
 

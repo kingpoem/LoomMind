@@ -1,4 +1,4 @@
-"""会话级 LLM 配置覆盖（优先于 .env）。"""
+"""会话级 LLM 配置覆盖（优先于 settings.json）。"""
 
 from dataclasses import dataclass
 
@@ -7,7 +7,7 @@ from .provider import LLMProvider, resolve_llm_provider
 
 @dataclass
 class LLMRuntimeSettings:
-    """未设置的字段回退到环境变量。"""
+    """未设置的字段回退到 settings.json。"""
 
     provider: LLMProvider | None = None
     openrouter_api_key: str | None = None

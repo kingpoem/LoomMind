@@ -6,7 +6,11 @@ from functools import lru_cache
 import tiktoken
 from langchain_core.messages import AIMessage, BaseMessage
 
-TOKEN_CONTEXT_LIMIT = 100_000
+from settings import get_int
+
+
+def token_context_limit() -> int:
+    return get_int("context.token_context_limit", 100_000)
 
 
 @lru_cache(maxsize=1)

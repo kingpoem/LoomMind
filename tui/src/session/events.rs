@@ -11,7 +11,9 @@ use crate::session::state::{App, Overlay, SessionState};
 use crate::term::Term;
 use crate::util::{normalize_inline_text, truncate_to_width};
 use crate::view::history::{insert_assistant, insert_error, insert_system, insert_user};
-use crate::view::popup::{Selector, SelectorKind, SlashPopup, TextPrompt, ToolApproval, TrustApproval};
+use crate::view::popup::{
+    Selector, SelectorKind, SlashPopup, TextPrompt, ToolApproval, TrustApproval,
+};
 
 pub fn handle_child_event(term: &mut Term, app: &mut App, ev: ChildEvent) -> io::Result<()> {
     match ev {
@@ -110,7 +112,7 @@ pub fn handle_child_event(term: &mut Term, app: &mut App, ev: ChildEvent) -> io:
             }
         }
         ChildEvent::EnvPersisted { key, post_config } => {
-            insert_system(term, &format!("已写入 .env：{key}"))?;
+            insert_system(term, &format!("已写入 settings.json：{key}"))?;
             if let Some(pc) = post_config {
                 if pc.items.is_empty() {
                     app.overlay = Overlay::None;
@@ -354,7 +356,11 @@ fn open_post_model_config_flow(
     app.config_menu_backup = Some(pc.items.clone());
     let labels: Vec<String> = pc.items.iter().map(|x| x.label.clone()).collect();
     let ids: Vec<String> = pc.items.iter().map(|x| x.id.clone()).collect();
-    let mut sel = Selector::new(SelectorKind::ModelConfig, "继续配置（写入 .env）", false);
+    let mut sel = Selector::new(
+        SelectorKind::ModelConfig,
+        "继续配置（写入 settings.json）",
+        false,
+    );
     sel.populate_with_ids(labels, ids, vec![]);
     app.overlay = Overlay::Selector(sel);
     Ok(())
@@ -367,7 +373,11 @@ fn reopen_model_config_selector(app: &mut App) -> io::Result<()> {
     };
     let labels: Vec<String> = items.iter().map(|x| x.label.clone()).collect();
     let ids: Vec<String> = items.iter().map(|x| x.id.clone()).collect();
-    let mut sel = Selector::new(SelectorKind::ModelConfig, "继续配置（写入 .env）", false);
+    let mut sel = Selector::new(
+        SelectorKind::ModelConfig,
+        "继续配置（写入 settings.json）",
+        false,
+    );
     sel.populate_with_ids(labels, ids, vec![]);
     app.overlay = Overlay::Selector(sel);
     Ok(())
@@ -402,7 +412,7 @@ fn handle_text_prompt_key(
                 child_stdin,
                 json!({"type": "set_env_persist", "key": env_key, "value": input}),
             );
-            insert_system(term, "已提交，正在写入 .env…")?;
+            insert_system(term, "已提交，正在写入 settings.json…")?;
         }
         (KeyCode::Backspace, _) => {
             if prompt.cursor == 0 {
@@ -508,11 +518,7 @@ fn handle_selector_key(
         (KeyCode::Enter, _) => {
             let kind = sel.kind;
             if kind == SelectorKind::ModelConfig {
-                let id = sel
-                    .item_ids
-                    .get(sel.cursor)
-                    .cloned()
-                    .unwrap_or_default();
+                let id = sel.item_ids.get(sel.cursor).cloned().unwrap_or_default();
                 let item = app
                     .config_menu_backup
                     .as_ref()

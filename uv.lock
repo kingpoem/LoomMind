@@ -527,7 +527,6 @@ dependencies = [
     { name = "lark-oapi" },
     { name = "mcp", extra = ["cli"] },
     { name = "pyratatui" },
-    { name = "python-dotenv" },
     { name = "python-socks" },
     { name = "tiktoken" },
 ]
@@ -545,7 +544,6 @@ requires-dist = [
     { name = "lark-oapi", specifier = ">=1.5.3" },
     { name = "mcp", extras = ["cli"], specifier = ">=1.27.0" },
     { name = "pyratatui", specifier = ">=0.2.8" },
-    { name = "python-dotenv", specifier = ">=1.0.0" },
     { name = "python-socks", extras = ["asyncio"], specifier = ">=2.4.0" },
     { name = "tiktoken", specifier = ">=0.12.0" },
 ]

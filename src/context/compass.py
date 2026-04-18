@@ -9,13 +9,12 @@ from langchain_core.messages import AIMessage, BaseMessage, HumanMessage, System
 
 from api import create_chat_model
 from api.runtime_settings import LLMRuntimeSettings
+from settings import get_int
 
 _COMPASS_SUMMARY_SYSTEM = (
     "你是会话整理助手。将下列对话节选压缩为简洁中文摘要，保留：关键事实、用户目标、"
     "已达成共识、待办与约束、术语与数据；删去寒暄与重复。只输出摘要正文，不要标题或套话。"
 )
-
-_DEFAULT_KEEP_LAST = 8
 
 
 def _serialize_for_summary(msgs: list[BaseMessage]) -> str:
@@ -57,13 +56,14 @@ def _summarize_slice(
 def compass_compress(
     messages: list[BaseMessage],
     *,
-    keep_last: int = _DEFAULT_KEEP_LAST,
+    keep_last: int | None = None,
     llm: LLMRuntimeSettings | None = None,
 ) -> tuple[list[BaseMessage], str, str | None]:
     """压缩 system 之后的早期轮次，保留最近 keep_last 条消息。
 
     返回 (新消息列表, 状态说明, 当次摘要文本或 None；摘要可供写入 memory)。
     """
+    k = keep_last if keep_last is not None else get_int("context.compass_keep_last", 8)
     if not messages:
         return messages, "当前无消息。", None
 
@@ -72,11 +72,11 @@ def compass_compress(
         return messages, "首条不是系统消息，已跳过压缩。", None
 
     rest = messages[1:]
-    if len(rest) <= keep_last:
+    if len(rest) <= k:
         return messages, "近期消息不多，无需压缩。", None
 
-    old = rest[:-keep_last]
-    recent = rest[-keep_last:]
+    old = rest[:-k]
+    recent = rest[-k:]
     summary = _summarize_slice(old, llm=llm)
     if not summary:
         return messages, "摘要为空，未修改历史。", None

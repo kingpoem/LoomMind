@@ -7,9 +7,9 @@ from .ollama import (
     list_ollama_models,
 )
 from .openrouter import (
-    AVAILABLE_MODELS,
-    DEFAULT_MODEL,
+    available_models_list,
     create_openrouter_chat_model,
+    default_openrouter_model,
 )
 from .provider import LLMProvider, resolve_llm_provider
 from .runtime_settings import LLMRuntimeSettings
@@ -37,7 +37,7 @@ def list_available_models(*, llm: LLMRuntimeSettings | None = None) -> list[str]
         return list_ollama_models(
             base_url_override=llm.ollama_base_url if llm else None,
         )
-    return list(AVAILABLE_MODELS)
+    return list(available_models_list())
 
 
 def default_model_name(*, llm: LLMRuntimeSettings | None = None) -> str:
@@ -46,7 +46,7 @@ def default_model_name(*, llm: LLMRuntimeSettings | None = None) -> str:
         return default_ollama_model(
             base_url_override=llm.ollama_base_url if llm else None,
         )
-    return DEFAULT_MODEL
+    return default_openrouter_model()
 
 
 def invoke(

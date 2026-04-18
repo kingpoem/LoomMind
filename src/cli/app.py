@@ -1,7 +1,6 @@
 """本地终端多轮对话入口"""
 
 import json
-import os
 import subprocess
 import sys
 import traceback
@@ -23,14 +22,14 @@ from api.provider import LLMProvider
 from api.runtime_settings import LLMRuntimeSettings
 from context import ContentManager
 from context.compass import compass_compress
-from context.token_budget import TOKEN_CONTEXT_LIMIT, count_messages_tokens
+from context.token_budget import count_messages_tokens, token_context_limit
 from graph_agent import build_graph, list_available_mcps, list_available_skills
 from memory import build_system_prompt_with_memory, record_compass_digest
 from planning import resolve_planning_max_cycles
+from settings import get_str, merge_wire_llm_key
 from tools.loader import set_confirmation_callback, set_notification_callback
 
-from .env_file import remove_dotenv_key, upsert_dotenv
-from .post_model_config import collect_post_model_config_items, dotenv_path_for_session
+from .post_model_config import collect_post_model_config_items
 from .response_check import ResponseAction, detect_reply_command
 from .stdio_confirm import stdio_tool_confirm, stdio_tool_notify
 from .stdio_protocol import emit, read_command_line
@@ -100,7 +99,7 @@ def run_cli() -> None:
                 manager.persist(messages)
                 used = count_messages_tokens(messages)
                 print(
-                    f"[token] 已用 {used:,} / 上限 {TOKEN_CONTEXT_LIMIT:,}",
+                    f"[token] 已用 {used:,} / 上限 {token_context_limit():,}",
                     flush=True,
                 )
                 continue
@@ -108,10 +107,10 @@ def run_cli() -> None:
             prospective = count_messages_tokens(
                 [*messages, HumanMessage(content=user_text)]
             )
-            if prospective > TOKEN_CONTEXT_LIMIT:
+            if prospective > token_context_limit():
                 print(
                     f"本轮输入后约 {prospective:,} token，"
-                    f"已超过上限 {TOKEN_CONTEXT_LIMIT:,}，"
+                    f"已超过上限 {token_context_limit():,}，"
                     "请缩短对话或新开会话后再试。"
                 )
                 continue
@@ -155,7 +154,7 @@ def run_cli() -> None:
             _run_make_log()
             used = count_messages_tokens(messages)
             print(
-                f"[token] 已用 {used:,} / 上限 {TOKEN_CONTEXT_LIMIT:,}",
+                f"[token] 已用 {used:,} / 上限 {token_context_limit():,}",
                 flush=True,
             )
             if assistant_action is ResponseAction.EXIT:
@@ -268,7 +267,7 @@ class _Session:
     def set_max_plan_cycles(self, n: int | None) -> int:
         """设置单条用户消息内的规划循环上限。
 
-        `None` 表示仅使用环境变量 `LOOMMIND_MAX_PLAN_CYCLES`。
+        `None` 表示仅使用 settings.json 的 `planning.max_cycles`。
         """
         if n is not None and n < 1:
             raise ValueError("max_plan_cycles 须 >= 1")
@@ -318,7 +317,7 @@ def _emit_llm_config(session: _Session) -> None:
     ork = (
         s.openrouter_api_key.strip()
         if s.openrouter_api_key and str(s.openrouter_api_key).strip()
-        else os.environ.get("OPENROUTER_API_KEY", "").strip()
+        else get_str("llm.openrouter.api_key").strip()
     )
     base = normalized_openai_api_base(base_url_override=s.ollama_base_url)
     emit(
@@ -448,27 +447,24 @@ def run_cli_stdio() -> None:
                     emit(
                         {
                             "type": "error",
-                            "message": f"不允许写入的环境变量：{key!r}",
+                            "message": f"不允许写入的配置键：{key!r}",
                         }
                     )
                     continue
                 val_raw = raw.get("value")
                 val_s = "" if val_raw is None else str(val_raw)
-                path = dotenv_path_for_session()
                 try:
                     if not val_s.strip():
-                        remove_dotenv_key(path, key)
-                        os.environ.pop(key, None)
+                        merge_wire_llm_key(key, None)
                     else:
-                        upsert_dotenv(path, key, val_s.strip())
-                        os.environ[key] = val_s.strip()
+                        merge_wire_llm_key(key, val_s.strip())
                     session.clear_llm_override_for_env_key(key)
                     session.available_models = list_available_models(llm=session.llm)
                     if session.model_name not in session.available_models:
                         session.model_name = default_model_name(llm=session.llm)
                     session.graph = session._build()
-                except OSError as e:
-                    emit({"type": "error", "message": f"写入 .env 失败: {e}"})
+                except (OSError, ValueError) as e:
+                    emit({"type": "error", "message": f"写入 settings.json 失败: {e}"})
                 else:
                     remaining = collect_post_model_config_items(session)
                     emit(
@@ -519,7 +515,7 @@ def run_cli_stdio() -> None:
                     {
                         "type": "token_usage",
                         "used": used,
-                        "limit": TOKEN_CONTEXT_LIMIT,
+                        "limit": token_context_limit(),
                     }
                 )
                 continue
@@ -527,13 +523,13 @@ def run_cli_stdio() -> None:
             prospective = count_messages_tokens(
                 [*messages, HumanMessage(content=user_text)]
             )
-            if prospective > TOKEN_CONTEXT_LIMIT:
+            if prospective > token_context_limit():
                 emit(
                     {
                         "type": "system",
                         "message": (
                             f"本轮输入后约 {prospective:,} token，"
-                            f"已超过上限 {TOKEN_CONTEXT_LIMIT:,}，"
+                            f"已超过上限 {token_context_limit():,}，"
                             "请缩短对话或新开会话后再试。"
                         ),
                     }
@@ -585,7 +581,7 @@ def run_cli_stdio() -> None:
             manager.persist(messages)
             _run_make_log(silence=True)
             used = count_messages_tokens(messages)
-            emit({"type": "token_usage", "used": used, "limit": TOKEN_CONTEXT_LIMIT})
+            emit({"type": "token_usage", "used": used, "limit": token_context_limit()})
             if assistant_action is ResponseAction.EXIT:
                 emit({"type": "session_end", "reason": "assistant_exit"})
                 break

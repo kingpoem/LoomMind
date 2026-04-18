@@ -138,7 +138,7 @@ pub enum SelectorKind {
     Model,
     Skills,
     Mcp,
-    /// 选模型后：多项 .env 配置项列表
+    /// 选模型后：多项 settings.json 配置项列表
     ModelConfig,
 }
 
@@ -728,7 +728,11 @@ fn render_trust_actions(
     crate::view::history::render_buffer_line(frame, y, &line, area.width, area.x);
 }
 
-pub fn render_text_prompt(frame: &mut Frame, area: Rect, prompt: &TextPrompt) -> Option<(u16, u16)> {
+pub fn render_text_prompt(
+    frame: &mut Frame,
+    area: Rect,
+    prompt: &TextPrompt,
+) -> Option<(u16, u16)> {
     if area.height < 2 || area.width < 4 {
         return None;
     }
@@ -770,7 +774,7 @@ pub fn render_text_prompt(frame: &mut Frame, area: Rect, prompt: &TextPrompt) ->
             inner.x,
             y,
             inner.width,
-            "  Enter 写入 .env · Esc 返回或取消",
+            "  Enter 写入 settings.json · Esc 返回或取消",
             muted,
         );
     }

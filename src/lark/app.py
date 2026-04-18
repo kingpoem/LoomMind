@@ -2,11 +2,9 @@
 
 import json
 import logging
-import os
 import threading
 from typing import Any
 
-from dotenv import load_dotenv
 from langchain_core.messages import AIMessage, BaseMessage, HumanMessage, SystemMessage
 from lark_oapi import Client
 from lark_oapi.api.im.v1.model.create_message_request import CreateMessageRequest
@@ -24,6 +22,7 @@ import trust
 from context.content_manager import ContentManager
 from graph_agent import build_graph
 from memory import build_system_prompt_with_memory
+from settings import ensure_settings_file, get_str
 
 logger = logging.getLogger(__name__)
 
@@ -31,14 +30,6 @@ _CORE_SYSTEM_PROMPT = "你是简洁助手，用中文回答。"
 
 _chat_lock = threading.Lock()
 _chat_sessions: dict[str, tuple[list[BaseMessage], ContentManager]] = {}
-
-
-def _env(name: str, *, required: bool = True) -> str:
-    v = os.environ.get(name, "").strip()
-    if required and not v:
-        msg = f"缺少环境变量 {name}"
-        raise RuntimeError(msg)
-    return v
 
 
 def _chat_id(message: Any) -> str | None:
@@ -269,17 +260,23 @@ def build_event_dispatcher(
 
 def run_feishu_long_connection() -> None:
     """使用飞书事件长连接：需在开放平台将事件订阅方式配置为「长连接」。"""
-    load_dotenv()
+    ensure_settings_file()
     logging.basicConfig(level=logging.INFO, format="%(levelname)s %(name)s %(message)s")
     # 飞书是长驻 bot，没有启动时可交互的用户，显式禁用工作区信任态。
     trust.set_trusted(False)
 
-    app_id = _env("FEISHU_APP_ID")
-    app_secret = _env("FEISHU_APP_SECRET")
-    verification_token = _env("FEISHU_VERIFICATION_TOKEN")
-    user_access_token = os.environ.get("FEISHU_USER_ACCESS_TOKEN", "").strip()
-    encrypt_key = os.environ.get("FEISHU_ENCRYPT_KEY", "").strip()
-    self_open_id = os.environ.get("FEISHU_USER_OPEN_ID", "").strip() or None
+    app_id = get_str("feishu.app_id").strip()
+    app_secret = get_str("feishu.app_secret").strip()
+    verification_token = get_str("feishu.verification_token").strip()
+    if not app_id or not app_secret or not verification_token:
+        msg = (
+            "缺少 feishu.app_id / feishu.app_secret / "
+            "feishu.verification_token（settings.json）"
+        )
+        raise RuntimeError(msg)
+    user_access_token = get_str("feishu.user_access_token").strip()
+    encrypt_key = get_str("feishu.encrypt_key").strip()
+    self_open_id = get_str("feishu.user_open_id").strip() or None
 
     graph = build_graph()
     client = (

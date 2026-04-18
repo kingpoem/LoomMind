@@ -1,0 +1,43 @@
+{
+  "description": "LoomMind global settings",
+  "llm": {
+    "provider": "openrouter",
+    "openrouter": {
+      "api_key": "",
+      "base_url": "https://openrouter.ai/api/v1",
+      "available_models": [
+        "deepseek/deepseek-chat",
+        "deepseek/deepseek-chat-v3.1",
+        "qwen/qwen3-30b-a3b"
+      ],
+      "default_model": "deepseek/deepseek-chat"
+    },
+    "ollama": {
+      "base_url": "",
+      "default_origin": "http://127.0.0.1:11434",
+      "model": "",
+      "api_key_placeholder": "ollama",
+      "fallback_model": "llama3.2"
+    }
+  },
+  "planning": {
+    "max_cycles": null,
+    "default_max_cycles": 6,
+    "max_cycles_cap": 64,
+    "short_term_limit": 8,
+    "trace_limit": 16,
+    "task_outline_max": 12
+  },
+  "context": {
+    "token_context_limit": 100000,
+    "compass_keep_last": 8
+  },
+  "feishu": {
+    "app_id": "",
+    "app_secret": "",
+    "verification_token": "",
+    "user_access_token": "",
+    "encrypt_key": "",
+    "user_open_id": ""
+  }
+}

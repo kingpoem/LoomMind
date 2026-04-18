@@ -40,8 +40,8 @@ def build_graph(
     - `model_name=None` 走默认模型；
     - `enabled_skills=None` 表示「全部启用」，传空集合即「全部禁用」；
     - `enabled_mcps` 同上；
-    - `max_cycles=None` 时使用环境变量 `LOOMMIND_MAX_PLAN_CYCLES`（若未设置则为 6），
-      显式传入则覆盖环境变量。
+    - `max_cycles=None` 时使用 `planning.max_cycles`（未设置则用
+      `planning.default_max_cycles`）；显式传入则覆盖文件配置。
     """
     mcps = _filter_tools(load_tools(), enabled_mcps)
     skills = _filter_tools(load_all_skills(), enabled_skills)

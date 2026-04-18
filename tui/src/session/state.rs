@@ -1,7 +1,7 @@
 use std::time::Instant;
 
-use crate::theme::constants;
 use crate::child::ModelConfigItem;
+use crate::theme::constants;
 use crate::view::popup::{Selector, SlashPopup, TextPrompt, ToolApproval, TrustApproval};
 
 #[derive(Debug, PartialEq, Eq)]

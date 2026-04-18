@@ -1,17 +1,19 @@
 .cursor/
+docs/
+doc/
 
-# 本地记忆文件
+# local memory files
 memory/*
 !memory/.gitkeep
 
-# conversation logs（保留 log/ 目录；仅忽略其下内容）
+# conversation logs
 log/*
 !log/.gitkeep
 
-# API keys and local env
+# local config
+/settings.json
 .env
 .env.*
-!.env.example
 
 # uv / Python
 .venv/

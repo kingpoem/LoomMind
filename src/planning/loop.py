@@ -1,6 +1,5 @@
 """规划循环：thought -> action -> observation -> next step。"""
 
-import os
 import re
 from collections.abc import Iterable
 from typing import Annotated, NotRequired, TypedDict
@@ -19,14 +18,9 @@ from langgraph.prebuilt import ToolNode
 
 from api import create_chat_model
 from api.runtime_settings import LLMRuntimeSettings
+from settings import get_int, get_optional_int
 
 from .memory import append_long_term_memory, read_long_term_memories
-
-_DEFAULT_MAX_CYCLES = 6
-_MAX_PLAN_CYCLES_CAP = 64
-_SHORT_TERM_LIMIT = 8
-_TRACE_LIMIT = 16
-_TASK_OUTLINE_MAX = 12
 
 
 class PlanningTrace(TypedDict):
@@ -48,17 +42,17 @@ class PlanningState(TypedDict):
 def resolve_planning_max_cycles(override: int | None = None) -> int:
     """解析规划循环上限。
 
-    显式参数优先，否则读环境变量 LOOMMIND_MAX_PLAN_CYCLES，再退回默认值。
+    显式参数优先，否则读 `planning.max_cycles`，再退回
+    `planning.default_max_cycles`。
     """
+    cap = get_int("planning.max_cycles_cap", 64)
+    default_n = get_int("planning.default_max_cycles", 6)
     if override is not None:
-        return max(1, min(int(override), _MAX_PLAN_CYCLES_CAP))
-    raw = os.environ.get("LOOMMIND_MAX_PLAN_CYCLES", "").strip()
-    if not raw:
-        return _DEFAULT_MAX_CYCLES
-    try:
-        return max(1, min(int(raw), _MAX_PLAN_CYCLES_CAP))
-    except ValueError:
-        return _DEFAULT_MAX_CYCLES
+        return max(1, min(int(override), cap))
+    raw = get_optional_int("planning.max_cycles")
+    if raw is None:
+        return default_n
+    return max(1, min(int(raw), cap))
 
 
 def _clip(text: str, *, limit: int = 220) -> str:
@@ -89,7 +83,8 @@ def _extract_task_outline(text: str) -> list[str]:
         m2 = re.match(r"^[-*•]\s+(.+)$", line)
         if m2:
             out.append(_clip(m2.group(1), limit=160))
-    return out[:_TASK_OUTLINE_MAX]
+    n = get_int("planning.task_outline_max", 12)
+    return out[:n]
 
 
 def _latest_tool_messages(messages: list[BaseMessage]) -> list[ToolMessage]:
@@ -116,8 +111,9 @@ def _summarize_tool_observation(messages: list[ToolMessage]) -> str:
 def _append_trace(
     trace: list[PlanningTrace], *, node: str, content: str
 ) -> list[PlanningTrace]:
+    lim = get_int("planning.trace_limit", 16)
     updated = [*trace, {"node": node, "content": _clip(content, limit=260)}]
-    return updated[-_TRACE_LIMIT:]
+    return updated[-lim:]
 
 
 def _memory_hint(
@@ -128,7 +124,8 @@ def _memory_hint(
     limit: int,
     task_outline: list[str],
 ) -> str:
-    short = "\n".join(f"- {item}" for item in short_mem[-_SHORT_TERM_LIMIT:]) or "- 无"
+    st_lim = get_int("planning.short_term_limit", 8)
+    short = "\n".join(f"- {item}" for item in short_mem[-st_lim:]) or "- 无"
     long = "\n".join(f"- {item}" for item in long_mem[-6:]) or "- 无"
     outline_block = ""
     if task_outline:
@@ -242,12 +239,13 @@ def build_planning_graph(
         observed = _summarize_tool_observation(_latest_tool_messages(state["messages"]))
         if not observed:
             return {"short_term_memory": short_mem, "planning_trace": trace}
-        short_mem = [*short_mem, observed][-_SHORT_TERM_LIMIT:]
+        st_lim = get_int("planning.short_term_limit", 8)
+        short_mem = [*short_mem, observed][-st_lim:]
         if any(token in observed.lower() for token in ("error", "failed", "traceback")):
             short_mem = [
                 *short_mem,
                 "检测到工具失败迹象：请缩小查询范围、更换关键词或数据源，核对参数后再重试。",
-            ][-_SHORT_TERM_LIMIT:]
+            ][-st_lim:]
         trace = _append_trace(trace, node="observation", content=observed)
         return {"short_term_memory": short_mem, "planning_trace": trace}
 

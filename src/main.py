@@ -2,13 +2,11 @@
 
 import logging
 
-from dotenv import load_dotenv
-
 from cli import run_cli, run_cli_stdio
 from lark import run_feishu_long_connection
 from memory import ensure_memory_files
 from parser import parse_args
-from skills import list_skill_names
+from settings import ensure_settings_file
 
 
 def _quiet_http_loggers() -> None:
@@ -18,20 +16,13 @@ def _quiet_http_loggers() -> None:
 
 
 def main() -> None:
-    load_dotenv()
+    ensure_settings_file()
     ensure_memory_files()
     _quiet_http_loggers()
     args = parse_args()
 
     if args.stdio and not args.cli:
         raise SystemExit("--stdio 须与 --cli 同时使用")
-
-    if args.list_skills:
-        names = list_skill_names()
-        print(f"Connected skills: {len(names)}")
-        for n in names:
-            print(f"- {n}")
-        return
 
     if args.lark:
         run_feishu_long_connection()

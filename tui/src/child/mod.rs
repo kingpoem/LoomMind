@@ -261,21 +261,14 @@ fn parse_event(line: &str) -> Result<ChildEvent, String> {
         },
         "model_set" => {
             let name = s("name");
-            let post_config = value
-                .get("post_config")
-                .and_then(parse_post_config);
-            ChildEvent::ModelSet {
-                name,
-                post_config,
-            }
-        },
+            let post_config = value.get("post_config").and_then(parse_post_config);
+            ChildEvent::ModelSet { name, post_config }
+        }
         "env_persisted" => {
             let key = s("key");
-            let post_config = value
-                .get("post_config")
-                .and_then(parse_post_config);
+            let post_config = value.get("post_config").and_then(parse_post_config);
             ChildEvent::EnvPersisted { key, post_config }
-        },
+        }
         "skills_set" => ChildEvent::SkillsSet(str_array("selected")),
         "mcps_set" => ChildEvent::McpsSet(str_array("selected")),
         "tool_confirm_request" => {

@@ -8,7 +8,6 @@ dependencies = [
     "langgraph>=0.2.55",
     "langchain-openai>=0.3.0",
     "langchain-core>=0.3.0",
-    "python-dotenv>=1.0.0",
     "lark-oapi>=1.5.3",
     "python-socks[asyncio]>=2.4.0",
     "tiktoken>=0.12.0",
@@ -42,4 +41,14 @@ select = [
 ignore = []
 
 [tool.ruff.lint.isort]
-known-first-party = ["api", "cli", "context", "graph_agent", "lark", "memory", "parser", "planning"]
+known-first-party = [
+    "api",
+    "cli",
+    "context",
+    "graph_agent",
+    "lark",
+    "memory",
+    "parser",
+    "planning",
+    "settings",
+]
