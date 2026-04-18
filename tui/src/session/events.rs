@@ -406,12 +406,8 @@ fn submit(term: &mut Term, app: &mut App, child_stdin: &mut ChildStdin) -> io::R
         let cmd_key = cmd.to_lowercase();
         match cmd_key.as_str() {
             "quit" | "exit" => {
-                // 与 CLI / stdio 一致：交由 Python 的 detect_reply_command 处理并发出 session_end
-                let payload = json!({"type": "user_message", "text": text});
-                if let Err(err) = send_command(child_stdin, payload) {
-                    insert_error(term, &format!("写入子进程失败: {err}"))?;
-                    app.quit = true;
-                }
+                request_quit(child_stdin);
+                app.quit = true;
                 return Ok(());
             }
             "model" => {

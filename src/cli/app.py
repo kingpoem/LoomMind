@@ -27,7 +27,7 @@ from .response_check import ResponseAction, detect_reply_command
 from .stdio_confirm import stdio_tool_confirm
 from .stdio_protocol import emit, read_command_line
 
-_CORE_SYSTEM_PROMPT = "你是简洁助手，用中文回答。"
+_CORE_SYSTEM_PROMPT = "你是简洁助手，用中文回答。回答格式扁平化，段落化"
 
 
 def _run_make_log(*, silence: bool = False) -> None:
