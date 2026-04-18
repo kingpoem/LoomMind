@@ -1,8 +1,8 @@
-"""LoomMind 入口：须指定 --lark 或 --cli。"""
+"""LoomMind 入口：须指定 --lark 或 --cli（--stdio，供 TUI 子进程使用）。"""
 
 import logging
 
-from cli import run_cli, run_cli_stdio
+from cli import run_cli_stdio
 from lark import run_feishu_long_connection
 from memory import ensure_memory_files
 from parser import parse_args
@@ -28,11 +28,13 @@ def main() -> None:
         run_feishu_long_connection()
         return
 
-    if args.cli and args.stdio:
-        run_cli_stdio()
-        return
+    if not args.stdio:
+        raise SystemExit(
+            "本地对话请使用 TUI：在项目根执行 "
+            "`cargo run --manifest-path tui/Cargo.toml`（或 `make run`）"
+        )
 
-    run_cli()
+    run_cli_stdio()
 
 
 if __name__ == "__main__":

@@ -1,5 +1,5 @@
-"""本地终端 CLI 入口。"""
+"""TUI 后端（stdio NDJSON）。"""
 
-from .app import run_cli, run_cli_stdio
+from .app import run_cli_stdio
 
-__all__ = ["run_cli", "run_cli_stdio"]
+__all__ = ["run_cli_stdio"]

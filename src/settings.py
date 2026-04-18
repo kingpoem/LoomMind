@@ -231,3 +231,22 @@ def merge_wire_llm_key(wire_key: str, value: str | None) -> None:
     text = json.dumps(data, ensure_ascii=False, indent=2) + "\n"
     path.write_text(text, encoding="utf-8")
     invalidate_settings_cache()
+
+
+def merge_llm_provider(provider: str) -> None:
+    """将 `llm.provider` 写入仓库根 settings.json（openrouter | ollama）。"""
+    v = provider.strip().lower()
+    if v not in ("openrouter", "ollama"):
+        raise ValueError(f"无效 provider：{provider!r}")
+    ensure_settings_file()
+    path = settings_path()
+    data = json.loads(path.read_text(encoding="utf-8"))
+    data = _migrate_flat_if_needed(data)
+    llm = data.get("llm")
+    if not isinstance(llm, dict):
+        llm = {}
+        data["llm"] = llm
+    llm["provider"] = v
+    text = json.dumps(data, ensure_ascii=False, indent=2) + "\n"
+    path.write_text(text, encoding="utf-8")
+    invalidate_settings_cache()

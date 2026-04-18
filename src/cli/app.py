@@ -26,11 +26,10 @@ from context.token_budget import count_messages_tokens, token_context_limit
 from graph_agent import build_graph, list_available_mcps, list_available_skills
 from memory import build_system_prompt_with_memory, record_compass_digest
 from planning import resolve_planning_max_cycles
-from settings import get_str, merge_wire_llm_key
+from settings import get_str, merge_llm_provider, merge_wire_llm_key
 from tools.loader import set_confirmation_callback, set_notification_callback
 
 from .post_model_config import collect_post_model_config_items
-from .response_check import ResponseAction, detect_reply_command
 from .stdio_confirm import stdio_tool_confirm, stdio_tool_notify
 from .stdio_protocol import emit, read_command_line
 from .stdio_trust import stdio_trust_prompt
@@ -56,115 +55,8 @@ def _run_make_log(*, silence: bool = False) -> None:
         subprocess.run(["make", "log"], cwd=root, check=False)
 
 
-def _tty_trust_prompt(workspace: Path) -> bool:
-    """CLI 启动时询问工作区信任；非 tty 一律按不信任处理。"""
-    if not sys.stdin.isatty():
-        return False
-    print(f"是否信任 AI 访问当前工作区 {workspace}？")
-    ans = input("这将允许AI读取该目录下的文件。[y/N] ").strip().lower()
-    return ans in ("y", "yes")
-
-
-def run_cli() -> None:
-    """本地多轮问答（不连接飞书），支持工具调用。
-
-    /exit、/quit 结束；/compass 压缩早期会话（摘要写入系统提示）。
-    """
-    trust.prompt_for_trust(_tty_trust_prompt)
-    app = build_graph()
-    manager = ContentManager()
-    messages: list[BaseMessage] = [
-        SystemMessage(content=build_system_prompt_with_memory(_CORE_SYSTEM_PROMPT)),
-    ]
-    manager.persist(messages)
-
-    print("/exit、/quit 结束; /compass 手动压缩会话")
-    try:
-        while True:
-            try:
-                user_text = input("你: ").strip()
-            except EOFError:
-                break
-            if not user_text:
-                continue
-
-            user_action = detect_reply_command(user_text)
-            if user_action is ResponseAction.EXIT:
-                break
-            if user_action is ResponseAction.COMPASS:
-                messages, status, digest = compass_compress(messages)
-                print(status)
-                if digest:
-                    record_compass_digest(digest)
-                manager.persist(messages)
-                used = count_messages_tokens(messages)
-                print(
-                    f"[token] 已用 {used:,} / 上限 {token_context_limit():,}",
-                    flush=True,
-                )
-                continue
-
-            prospective = count_messages_tokens(
-                [*messages, HumanMessage(content=user_text)]
-            )
-            if prospective > token_context_limit():
-                print(
-                    f"本轮输入后约 {prospective:,} token，"
-                    f"已超过上限 {token_context_limit():,}，"
-                    "请缩短对话或新开会话后再试。"
-                )
-                continue
-            messages.append(HumanMessage(content=user_text))
-            try:
-                print("助手: ", end="", flush=True)
-                parts: list[str] = []
-                final_state: dict | None = None
-                for mode, data in app.stream(
-                    {"messages": messages},
-                    stream_mode=["messages", "values"],
-                ):
-                    if mode == "messages":
-                        chunk, _ = data
-                        if isinstance(chunk, AIMessageChunk) and isinstance(
-                            chunk.content, str
-                        ):
-                            if chunk.content:
-                                print(chunk.content, end="", flush=True)
-                                parts.append(chunk.content)
-                    elif mode == "values":
-                        final_state = data
-                print()
-                assistant_text = "".join(parts)
-                if final_state is not None:
-                    messages = list(final_state["messages"])
-                    if not assistant_text and messages:
-                        last = messages[-1]
-                        if isinstance(last, AIMessage) and isinstance(
-                            last.content, str
-                        ):
-                            assistant_text = last.content
-                            if assistant_text:
-                                print(assistant_text)
-            except Exception:
-                manager.persist(messages)
-                raise
-
-            assistant_action = detect_reply_command(assistant_text)
-            manager.persist(messages)
-            _run_make_log()
-            used = count_messages_tokens(messages)
-            print(
-                f"[token] 已用 {used:,} / 上限 {token_context_limit():,}",
-                flush=True,
-            )
-            if assistant_action is ResponseAction.EXIT:
-                break
-    finally:
-        manager.persist(messages)
-
-
 # ---------------------------------------------------------------------------
-# stdio (TUI) entry
+# stdio（TUI 子进程）
 # ---------------------------------------------------------------------------
 
 
@@ -277,11 +169,26 @@ class _Session:
 
 
 def _emit_models(session: _Session) -> None:
+    # Ollama：TUI 侧先展示空列表（由用户配置 base 后再用 /model 拉取）
+    if session.llm.effective_provider() is LLMProvider.OLLAMA:
+        items: list[str] = []
+    else:
+        items = session.available_models
     emit(
         {
             "type": "models",
-            "items": session.available_models,
+            "items": items,
             "current": session.model_name,
+        }
+    )
+
+
+def _emit_providers(session: _Session) -> None:
+    emit(
+        {
+            "type": "providers",
+            "items": [LLMProvider.OPENROUTER, LLMProvider.OLLAMA],
+            "current": session.llm.effective_provider().value,
         }
     )
 
@@ -342,7 +249,7 @@ def _emit_llm_config(session: _Session) -> None:
 
 
 def run_cli_stdio() -> None:
-    """与 `run_cli` 相同业务逻辑，经 stdin/stdout NDJSON 与 TUI 通信。"""
+    """TUI 后端：经 stdin/stdout NDJSON 与 Ratatui 前端通信。"""
     set_confirmation_callback(stdio_tool_confirm)
     set_notification_callback(stdio_tool_notify)
     # 信任询问先于 ready：TUI 在收到 ready 前用 overlay 阻塞输入。
@@ -383,8 +290,51 @@ def run_cli_stdio() -> None:
                 emit({"type": "session_end", "reason": cmd_type})
                 break
 
+            if cmd_type == "compass":
+                messages, status, digest = compass_compress(messages, llm=session.llm)
+                emit({"type": "system", "message": status})
+                if digest:
+                    record_compass_digest(digest)
+                manager.persist(messages)
+                used = count_messages_tokens(messages)
+                emit(
+                    {
+                        "type": "token_usage",
+                        "used": used,
+                        "limit": token_context_limit(),
+                    }
+                )
+                continue
+
             if cmd_type == "list_models":
                 _emit_models(session)
+                continue
+            if cmd_type == "list_providers":
+                _emit_providers(session)
+                continue
+            if cmd_type == "set_provider":
+                name = str(raw.get("name", "")).strip().lower()
+                if name not in (LLMProvider.OPENROUTER, LLMProvider.OLLAMA):
+                    emit(
+                        {
+                            "type": "error",
+                            "message": (
+                                f"无效 provider：{raw.get('name')!r}；"
+                                "请使用 openrouter 或 ollama"
+                            ),
+                        }
+                    )
+                    continue
+                try:
+                    merge_llm_provider(name)
+                except ValueError as e:
+                    emit({"type": "error", "message": str(e)})
+                    continue
+                session.llm = LLMRuntimeSettings()
+                session.available_models = list_available_models(llm=session.llm)
+                session.model_name = default_model_name(llm=session.llm)
+                session.graph = session._build()
+                _emit_llm_config(session)
                 continue
             if cmd_type == "set_model":
                 try:
@@ -500,26 +450,6 @@ def run_cli_stdio() -> None:
             if not user_text:
                 continue
 
-            user_action = detect_reply_command(user_text)
-            if user_action is ResponseAction.EXIT:
-                emit({"type": "session_end", "reason": "user_exit"})
-                break
-            if user_action is ResponseAction.COMPASS:
-                messages, status, digest = compass_compress(messages, llm=session.llm)
-                emit({"type": "system", "message": status})
-                if digest:
-                    record_compass_digest(digest)
-                manager.persist(messages)
-                used = count_messages_tokens(messages)
-                emit(
-                    {
-                        "type": "token_usage",
-                        "used": used,
-                        "limit": token_context_limit(),
-                    }
-                )
-                continue
-
             prospective = count_messages_tokens(
                 [*messages, HumanMessage(content=user_text)]
             )
@@ -577,13 +507,9 @@ def run_cli_stdio() -> None:
                 manager.persist(messages)
                 continue
 
-            assistant_action = detect_reply_command(assistant_text)
             manager.persist(messages)
             _run_make_log(silence=True)
             used = count_messages_tokens(messages)
             emit({"type": "token_usage", "used": used, "limit": token_context_limit()})
-            if assistant_action is ResponseAction.EXIT:
-                emit({"type": "session_end", "reason": "assistant_exit"})
-                break
     finally:
         manager.persist(messages)

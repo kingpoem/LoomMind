@@ -86,6 +86,20 @@ pub fn handle_child_event(term: &mut Term, app: &mut App, ev: ChildEvent) -> io:
             insert_system(term, &format!("当前模型：{}", current.unwrap_or_default()))?;
             insert_system(term, &format!("可用模型：{}", items.join(", ")))?;
         }
+        ChildEvent::Providers { items, current } => {
+            if let Overlay::Selector(sel) = &mut app.overlay {
+                if sel.kind == SelectorKind::Provider {
+                    let selected = current.clone().map(|c| vec![c]).unwrap_or_default();
+                    sel.populate(items, selected);
+                    return Ok(());
+                }
+            }
+            insert_system(
+                term,
+                &format!("当前 Provider：{}", current.unwrap_or_default()),
+            )?;
+            insert_system(term, &format!("可选：{}", items.join(", ")))?;
+        }
         ChildEvent::Skills { items, selected } => {
             if let Overlay::Selector(sel) = &mut app.overlay {
                 if sel.kind == SelectorKind::Skills {
@@ -343,16 +357,6 @@ fn open_post_model_config_flow(
         app.config_menu_backup = None;
         return Ok(());
     }
-    if pc.items.len() == 1 {
-        app.config_menu_backup = None;
-        let it = &pc.items[0];
-        app.overlay = Overlay::TextPrompt(TextPrompt::new_env(
-            it.id.clone(),
-            it.label.clone(),
-            it.hint.clone(),
-        ));
-        return Ok(());
-    }
     app.config_menu_backup = Some(pc.items.clone());
     let labels: Vec<String> = pc.items.iter().map(|x| x.label.clone()).collect();
     let ids: Vec<String> = pc.items.iter().map(|x| x.id.clone()).collect();
@@ -533,6 +537,10 @@ fn handle_selector_key(
                 SelectorKind::Model => {
                     let pick = sel.pick_single();
                     pick.map(|name| json!({"type": "set_model", "name": name}))
+                }
+                SelectorKind::Provider => {
+                    let pick = sel.pick_single();
+                    pick.map(|name| json!({"type": "set_provider", "name": name}))
                 }
                 SelectorKind::Skills => {
                     let names = sel.collect_selected();
@@ -720,6 +728,16 @@ fn submit(term: &mut Term, app: &mut App, child_stdin: &mut ChildStdin) -> io::R
                 app.quit = true;
                 return Ok(());
             }
+            "provider" => {
+                return open_selector(
+                    app,
+                    child_stdin,
+                    SelectorKind::Provider,
+                    "选择 LLM Provider",
+                    false,
+                    json!({"type": "list_providers"}),
+                );
+            }
             "model" => {
                 return open_selector(
                     app,
@@ -749,6 +767,10 @@ fn submit(term: &mut Term, app: &mut App, child_stdin: &mut ChildStdin) -> io::R
                     true,
                     json!({"type": "list_mcps"}),
                 );
+            }
+            "compass" => {
+                let _ = send_command(child_stdin, json!({"type": "compass"}));
+                return Ok(());
             }
             other => {
                 insert_system(term, &format!("未知命令 /{other}"))?;

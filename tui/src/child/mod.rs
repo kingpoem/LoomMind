@@ -62,6 +62,10 @@ pub enum ChildEvent {
         items: Vec<String>,
         current: Option<String>,
     },
+    Providers {
+        items: Vec<String>,
+        current: Option<String>,
+    },
     Skills {
         items: Vec<String>,
         selected: Vec<String>,
@@ -247,6 +251,16 @@ fn parse_event(line: &str) -> Result<ChildEvent, String> {
                 .and_then(|v| v.as_str())
                 .map(String::from);
             ChildEvent::Models {
+                items: str_array("items"),
+                current,
+            }
+        }
+        "providers" => {
+            let current = value
+                .get("current")
+                .and_then(|v| v.as_str())
+                .map(String::from);
+            ChildEvent::Providers {
                 items: str_array("items"),
                 current,
             }

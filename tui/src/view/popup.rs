@@ -14,8 +14,12 @@ pub struct SlashCommand {
     pub description: &'static str,
 }
 
-/// 仅保留与 Python 后端真实对接的命令。
+/// 斜杠补全；与 Python `run_cli_stdio` 支持的指令一致。
 pub const COMMANDS: &[SlashCommand] = &[
+    SlashCommand {
+        name: "provider",
+        description: "选择 LLM Provider",
+    },
     SlashCommand {
         name: "model",
         description: "选择对话使用的模型",
@@ -29,12 +33,16 @@ pub const COMMANDS: &[SlashCommand] = &[
         description: "勾选需要启用的 MCP 工具",
     },
     SlashCommand {
+        name: "compass",
+        description: "压缩会话上下文",
+    },
+    SlashCommand {
         name: "exit",
-        description: "结束会话（同 /quit）",
+        description: "结束会话",
     },
     SlashCommand {
         name: "quit",
-        description: "结束会话（同 /exit）",
+        description: "结束会话",
     },
 ];
 
@@ -138,6 +146,8 @@ pub enum SelectorKind {
     Model,
     Skills,
     Mcp,
+    /// openrouter | ollama，写入 settings.json
+    Provider,
     /// 选模型后：多项 settings.json 配置项列表
     ModelConfig,
 }

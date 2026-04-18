@@ -1,7 +1,7 @@
 """CLI 参数解析。
-uv run python src/main.py --lark       # 飞书长连接
-uv run python src/main.py --cli        # 本地终端多轮对话
-uv run python src/main.py --help
+uv run python src/main.py --lark              # 飞书长连接
+uv run python src/main.py --cli --stdio       # TUI 子进程（stdin/stdout NDJSON）
+本地交互请用：`cargo run --manifest-path tui/Cargo.toml`
 """
 
 import argparse
@@ -21,7 +21,10 @@ def build_parser() -> argparse.ArgumentParser:
     mode.add_argument(
         "--cli",
         action="store_true",
-        help="在本地终端中进行多轮对话（不连接飞书）",
+        help=(
+            "本地模式（须与 --stdio 联用；"
+            "交互请用 `cargo run --manifest-path tui/Cargo.toml`）"
+        ),
     )
     parser.add_argument(
         "--stdio",
