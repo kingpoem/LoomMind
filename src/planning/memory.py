@@ -3,7 +3,7 @@
 from datetime import UTC, datetime
 from pathlib import Path
 
-from memory.store import memory_dir
+from memory.store import ensure_memory_files, memory_dir
 
 _PLANNING_MEMORY_FILE = "planning_long_term.md"
 _MAX_FILE_CHARS = 24_000
@@ -11,12 +11,8 @@ _MAX_ENTRY_CHARS = 800
 
 
 def planning_memory_path() -> Path:
-    d = memory_dir()
-    d.mkdir(parents=True, exist_ok=True)
-    path = d / _PLANNING_MEMORY_FILE
-    if not path.exists():
-        path.write_text("# 长期规划记忆\n\n", encoding="utf-8")
-    return path
+    ensure_memory_files()
+    return memory_dir() / _PLANNING_MEMORY_FILE
 
 
 def read_long_term_memories(*, limit: int = 6) -> list[str]:

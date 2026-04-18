@@ -6,6 +6,7 @@ from dotenv import load_dotenv
 
 from cli import run_cli, run_cli_stdio
 from lark import run_feishu_long_connection
+from memory import ensure_memory_files
 from parser import parse_args
 from skills import list_skill_names
 
@@ -18,6 +19,7 @@ def _quiet_http_loggers() -> None:
 
 def main() -> None:
     load_dotenv()
+    ensure_memory_files()
     _quiet_http_loggers()
     args = parse_args()
 

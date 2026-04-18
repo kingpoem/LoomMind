@@ -1,5 +1,9 @@
 .cursor/
 
+# 本地记忆文件（默认由 template/*.tmpl 首次复制生成）
+memory/*
+!memory/.gitkeep
+
 # conversation logs（保留 log/ 目录；仅忽略其下内容）
 log/*
 !log/.gitkeep
