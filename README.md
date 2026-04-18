@@ -7,10 +7,17 @@
 - `log` 目录下记录完整对话记录内容
 - 用户通过 `compass` 命令手动执行压缩上下文操作（额外调用api进行压缩）
 - 使用 `tiktoken` 进行 token 计算
+- 超过最大 token 80% 时执行自动压缩
 
-### Memory（记忆）
+### Memory
 
-记忆分成两条线，避免把所有状态都塞进对话 tokens。一条是仓库根目录 `memory/` 下的人可编辑 Markdown：`memory_summary.md` 承接 compass 产出的跨轮摘要，`MEMORY.md` 作为手册与长期约定，经 `build_system_prompt_with_memory` 在会话开头注入系统提示，使每一轮规划都带上稳定背景知识。另一条是规划图内部的短期与长期条：`short_term_memory` 在图状态里滚动保存本轮工具观察与失败提示，`long_term_memory` 条目来自 `planning_long_term.md`，在 `remember` 节点把结构化摘要追加到文件并回读最近若干条；文件侧有字符上限与裁剪，防止单文件无限膨胀。取舍是不引入向量检索与外部记忆服务，用「文件 + 截断规则 + 规划循环内显式写入」换可维护性与可演示性，代价是检索与关联推理能力有限。
+#### 系统提示线：`memory/` 文件与会话背景
+
+仓库根目录 `memory/` 下的人可编辑 Markdown：`memory_summary.md` 承接 compass 产出的跨轮摘要，`MEMORY.md` 作为手册与长期约定，经 `build_system_prompt_with_memory` 在会话开头注入系统提示，使每一轮规划都带上稳定背景知识。
+
+#### 规划图线：短期状态与 `planning_long_term.md`
+
+`short_term_memory` 在图状态里滚动保存本轮工具观察与失败提示，`long_term_memory` 条目来自 `planning_long_term.md`，在 `remember` 节点把结构化摘要追加到文件并回读最近若干条；文件侧有字符上限与裁剪，防止单文件无限膨胀。
 
 ### Planning（规划）
 
