@@ -24,6 +24,7 @@ from graph_agent import build_graph
 from memory import build_system_prompt_with_memory
 from prompt_text import load_template_prompt
 from settings import ensure_settings_file, get_str
+from user_input_parse import UserInputSymbolTable, build_user_input_symbol_table
 
 logger = logging.getLogger(__name__)
 
@@ -31,6 +32,7 @@ _CORE_SYSTEM_PROMPT = load_template_prompt("core/system_lark.txt")
 
 _chat_lock = threading.Lock()
 _chat_sessions: dict[str, tuple[list[BaseMessage], ContentManager]] = {}
+_last_user_input_symbols: dict[str, UserInputSymbolTable] = {}
 
 
 def _chat_id(message: Any) -> str | None:
@@ -95,6 +97,9 @@ def _session_for_chat(chat_id: str) -> tuple[list[BaseMessage], ContentManager]:
 
 def _reply_text_from_graph(graph, chat_id: str, user_text: str) -> str:
     messages, manager = _session_for_chat(chat_id)
+    sym = build_user_input_symbol_table(user_text)
+    with _chat_lock:
+        _last_user_input_symbols[chat_id] = sym
     messages.append(HumanMessage(content=user_text))
     try:
         result = graph.invoke({"messages": messages})

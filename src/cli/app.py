@@ -32,6 +32,7 @@ from planning import resolve_planning_max_cycles
 from prompt_text import load_template_prompt
 from settings import get_str, merge_llm_provider, merge_wire_llm_key
 from tools.loader import set_confirmation_callback, set_notification_callback
+from user_input_parse import UserInputSymbolTable, build_user_input_symbol_table
 
 from .post_model_config import collect_post_model_config_items
 from .stdio_confirm import stdio_tool_confirm, stdio_tool_notify
@@ -100,6 +101,7 @@ class _Session:
         self.enabled_skills: set[str] = set(self.available_skills)
         self.enabled_mcps: set[str] = set(self.available_mcps)
         self.max_plan_cycles: int | None = None
+        self.last_user_input_symbols: UserInputSymbolTable | None = None
         self.graph = self._build()
 
     def _build(self):
@@ -458,6 +460,7 @@ def run_cli_stdio() -> None:
             if not user_text:
                 continue
 
+            session.last_user_input_symbols = build_user_input_symbol_table(user_text)
             pending = HumanMessage(content=user_text)
             messages, auto_compressed = _auto_compress_if_over_threshold(
                 messages,
