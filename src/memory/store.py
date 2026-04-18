@@ -8,10 +8,11 @@ _MEMORY_DIRNAME = "memory"
 _TEMPLATE_DIRNAME = "template"
 _SUMMARY_NAME = "memory_summary.md"
 _HANDBOOK_NAME = "MEMORY.md"
-_MEMORY_SEEDS: tuple[tuple[str, str], ...] = (
-    ("MEMORY.md.tmpl", "MEMORY.md"),
-    ("memory_summary.md.tmpl", "memory_summary.md"),
-    ("planning_long_term.md.tmpl", "planning_long_term.md"),
+# 与 `template/` 下的同名文件对应；首次运行时复制到 `memory/`（目标已存在则跳过）。
+_MEMORY_TEMPLATE_NAMES: tuple[str, ...] = (
+    "MEMORY.md",
+    "memory_summary.md",
+    "planning_long_term.md",
 )
 _MAX_DIGEST_CHARS = 4000
 _MAX_SUMMARY_FILE_CHARS = 48_000
@@ -38,29 +39,29 @@ def memory_handbook_path() -> Path:
 
 
 def ensure_memory_files() -> None:
-    """首次本地运行时从 `template/*.tmpl` 复制到 `memory/`（目标已存在则跳过）。"""
+    """首次本地运行时从 `template/` 同名文件复制到 `memory/`（目标已存在则跳过）。"""
     d = memory_dir()
     d.mkdir(parents=True, exist_ok=True)
-    tmpl_root = template_dir()
-    for tmpl_name, dest_name in _MEMORY_SEEDS:
-        dest = d / dest_name
+    template_root = template_dir()
+    for name in _MEMORY_TEMPLATE_NAMES:
+        dest = d / name
         if dest.is_file():
             continue
-        src = tmpl_root / tmpl_name
+        src = template_root / name
         if src.is_file():
             shutil.copy2(src, dest)
             continue
-        if dest_name == _SUMMARY_NAME:
+        if name == _SUMMARY_NAME:
             dest.write_text(
                 "# 记忆概述\n\n由 compass 压缩会话时自动追加摘要；可手动编辑。\n\n",
                 encoding="utf-8",
             )
-        elif dest_name == _HANDBOOK_NAME:
+        elif name == _HANDBOOK_NAME:
             dest.write_text(
                 "# 记忆手册\n\n长期约定与术语；会话启动时会节选注入系统提示。\n\n",
                 encoding="utf-8",
             )
-        elif dest_name == "planning_long_term.md":
+        elif name == "planning_long_term.md":
             dest.write_text("# 长期规划记忆\n\n", encoding="utf-8")
 
 

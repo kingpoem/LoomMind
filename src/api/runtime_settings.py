@@ -1,7 +1,5 @@
 """会话级 LLM 配置覆盖（优先于 .env）。"""
 
-from __future__ import annotations
-
 from dataclasses import dataclass
 
 from .provider import LLMProvider, resolve_llm_provider

@@ -1,7 +1,5 @@
 """读写项目根目录 `.env`（用于 TUI 持久化 API 等配置）。"""
 
-from __future__ import annotations
-
 import re
 from pathlib import Path
 

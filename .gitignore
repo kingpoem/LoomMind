@@ -1,6 +1,6 @@
 .cursor/
 
-# 本地记忆文件（默认由 template/*.tmpl 首次复制生成）
+# 本地记忆文件
 memory/*
 !memory/.gitkeep
 
