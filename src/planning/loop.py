@@ -18,6 +18,7 @@ from langgraph.prebuilt import ToolNode
 
 from api import create_chat_model
 from api.runtime_settings import LLMRuntimeSettings
+from prompt_text import load_template_prompt
 from settings import get_int, get_optional_int
 
 from .memory import append_long_term_memory, read_long_term_memories
@@ -130,31 +131,24 @@ def _memory_hint(
     outline_block = ""
     if task_outline:
         ol = "\n".join(f"- {item}" for item in task_outline)
-        outline_block = f"\n\n本轮已拆解子目标（请按需推进，勿偏离）：\n{ol}\n"
+        outline_block = (
+            "\n\n"
+            + load_template_prompt("planning/task_outline_block.txt").replace(
+                "{outline}", ol
+            )
+            + "\n"
+        )
 
-    phases = (
-        "ReAct 四阶段（隐式遵循即可）：\n"
-        "1) 规划：先列出可验证子目标或检查项，再行动；"
-        "复杂任务可写在回复中用编号或列表。\n"
-        "2) 探索与执行：每次工具调用对应明确子问题；"
-        "并行多工具时请各工具目的清晰。\n"
-        "3) 观察与重试：以上「短期记忆」中的工具摘要即观察；"
-        "失败时换关键词、换数据源或缩小范围后再试。\n"
-        "4) 收尾与交付：信息已足则直接给出结论与交付物说明，"
-        "勿为凑步数而重复调用工具。\n"
-    )
+    base = load_template_prompt("planning/thought_context.txt") + "\n"
 
     nearing = ""
     if limit > 1 and cycle >= max(0, limit - 2):
-        nearing = (
-            f"\n当前已接近循环上限（{cycle}/{limit}），"
-            "请优先合并已有信息、给出可交付答案，避免再发起大规模探索。\n"
+        nearing = "\n" + load_template_prompt("planning/nearing_limit.txt").format(
+            cycle=cycle, limit=limit
         )
 
     return (
-        "你正在执行规划循环：thought -> action -> observation -> next step。\n"
-        f"{phases}"
-        "若信息足够可直接给结论，不必强行调用工具。\n"
+        f"{base}"
         f"{nearing}"
         f"{outline_block}"
         "短期记忆（本轮）:\n"
@@ -244,7 +238,7 @@ def build_planning_graph(
         if any(token in observed.lower() for token in ("error", "failed", "traceback")):
             short_mem = [
                 *short_mem,
-                "检测到工具失败迹象：请缩小查询范围、更换关键词或数据源，核对参数后再重试。",
+                load_template_prompt("planning/tool_failure_hint.txt"),
             ][-st_lim:]
         trace = _append_trace(trace, node="observation", content=observed)
         return {"short_term_memory": short_mem, "planning_trace": trace}
@@ -268,15 +262,15 @@ def build_planning_graph(
         long_mem = list(state.get("long_term_memory", []))
         outline = list(state.get("task_outline", []))
         outline_txt = "\n".join(f"- {x}" for x in outline) if outline else "无"
-        finalize_prompt = SystemMessage(
-            content=(
-                "达到规划循环退出条件（最大循环次数），"
-                "现在请基于现有信息直接给最终答复，禁止继续调用工具。\n\n"
-                f"子目标拆解:\n{outline_txt}\n\n"
-                f"短期记忆:\n{chr(10).join(short_mem) or '无'}\n\n"
-                f"长期记忆:\n{chr(10).join(long_mem) or '无'}"
-            )
+        short_mem_s = "\n".join(short_mem) or "无"
+        long_mem_s = "\n".join(long_mem) or "无"
+        fin = load_template_prompt("planning/finalize.txt")
+        fin = (
+            fin.replace("{outline_txt}", outline_txt)
+            .replace("{short_mem}", short_mem_s)
+            .replace("{long_mem}", long_mem_s)
         )
+        finalize_prompt = SystemMessage(content=fin)
         reply: AIMessage = base_model.invoke([*state["messages"], finalize_prompt])
         trace = _append_trace(
             trace,

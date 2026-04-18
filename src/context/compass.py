@@ -9,12 +9,11 @@ from langchain_core.messages import AIMessage, BaseMessage, HumanMessage, System
 
 from api import create_chat_model
 from api.runtime_settings import LLMRuntimeSettings
+from prompt_text import load_template_prompt
 from settings import get_int
 
-_COMPASS_SUMMARY_SYSTEM = (
-    "你是会话整理助手。将下列对话节选压缩为简洁中文摘要，保留：关键事实、用户目标、"
-    "已达成共识、待办与约束、术语与数据；删去寒暄与重复。只输出摘要正文，不要标题或套话。"
-)
+_COMPASS_SUMMARY_SYSTEM = load_template_prompt("compass/summary_system.txt")
+_COMPASS_MERGE_HEADING = load_template_prompt("compass/merge_heading.txt")
 
 
 def _serialize_for_summary(msgs: list[BaseMessage]) -> str:
@@ -39,12 +38,13 @@ def _summarize_slice(
 ) -> str:
     model = create_chat_model(llm=llm)
     text = _serialize_for_summary(slice_msgs)
+    user_content = load_template_prompt("compass/summary_user.txt").replace(
+        "{excerpt}", text
+    )
     reply = model.invoke(
         [
             SystemMessage(content=_COMPASS_SUMMARY_SYSTEM),
-            HumanMessage(
-                content="请压缩以下对话节选：\n\n---\n" + text + "\n---",
-            ),
+            HumanMessage(content=user_content),
         ]
     )
     out = reply.content
@@ -82,7 +82,7 @@ def compass_compress(
         return messages, "摘要为空，未修改历史。", None
 
     merged = SystemMessage(
-        content=first.content + "\n\n【较早对话摘要】\n" + summary,
+        content=first.content + "\n\n" + _COMPASS_MERGE_HEADING + "\n" + summary,
     )
     return (
         [merged, *recent],

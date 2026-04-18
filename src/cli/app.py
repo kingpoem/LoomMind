@@ -22,10 +22,16 @@ from api.provider import LLMProvider
 from api.runtime_settings import LLMRuntimeSettings
 from context import ContentManager
 from context.compass import compass_compress
-from context.token_budget import count_messages_tokens, token_context_limit
+from context.token_budget import (
+    count_messages_tokens,
+    token_auto_compress_max_rounds,
+    token_auto_compress_ratio,
+    token_context_limit,
+)
 from graph_agent import build_graph, list_available_mcps, list_available_skills
 from memory import build_system_prompt_with_memory, record_compass_digest
 from planning import resolve_planning_max_cycles
+from prompt_text import load_template_prompt
 from settings import get_str, merge_llm_provider, merge_wire_llm_key
 from tools.loader import set_confirmation_callback, set_notification_callback
 
@@ -34,7 +40,37 @@ from .stdio_confirm import stdio_tool_confirm, stdio_tool_notify
 from .stdio_protocol import emit, read_command_line
 from .stdio_trust import stdio_trust_prompt
 
-_CORE_SYSTEM_PROMPT = "你是简洁助手，用中文回答。回答格式扁平化，段落化"
+_CORE_SYSTEM_PROMPT = load_template_prompt("core/system.txt")
+
+
+def _auto_compress_if_over_threshold(
+    messages: list[BaseMessage],
+    *,
+    pending_user: HumanMessage,
+    llm: LLMRuntimeSettings,
+    manager: ContentManager,
+) -> tuple[list[BaseMessage], bool]:
+    """当「现有消息 + 本轮用户输入」超过上限比例时，自动执行 compass 压缩。"""
+    ratio = token_auto_compress_ratio()
+    if ratio <= 0:
+        return messages, False
+    limit = token_context_limit()
+    threshold = max(1, int(limit * ratio))
+    did_any = False
+    for _ in range(token_auto_compress_max_rounds()):
+        prospective = count_messages_tokens([*messages, pending_user])
+        if prospective <= threshold:
+            break
+        before = count_messages_tokens(messages)
+        messages, _status, digest = compass_compress(messages, llm=llm)
+        after = count_messages_tokens(messages)
+        if digest:
+            record_compass_digest(digest)
+        if after >= before:
+            break
+        did_any = True
+        manager.persist(messages)
+    return messages, did_any
 
 
 def _run_make_log(*, silence: bool = False) -> None:
@@ -450,9 +486,34 @@ def run_cli_stdio() -> None:
             if not user_text:
                 continue
 
-            prospective = count_messages_tokens(
-                [*messages, HumanMessage(content=user_text)]
+            pending = HumanMessage(content=user_text)
+            messages, auto_compressed = _auto_compress_if_over_threshold(
+                messages,
+                pending_user=pending,
+                llm=session.llm,
+                manager=manager,
             )
+            if auto_compressed:
+                emit(
+                    {
+                        "type": "system",
+                        "message": (
+                            "上下文用量已超过上限的 "
+                            f"{round(token_auto_compress_ratio() * 100)}%，"
+                            "已自动压缩早期对话。"
+                        ),
+                    }
+                )
+                used = count_messages_tokens(messages)
+                emit(
+                    {
+                        "type": "token_usage",
+                        "used": used,
+                        "limit": token_context_limit(),
+                    }
+                )
+
+            prospective = count_messages_tokens([*messages, pending])
             if prospective > token_context_limit():
                 emit(
                     {
@@ -466,7 +527,7 @@ def run_cli_stdio() -> None:
                 )
                 continue
 
-            messages.append(HumanMessage(content=user_text))
+            messages.append(pending)
             try:
                 parts: list[str] = []
                 final_state: dict | None = None

@@ -30,7 +30,9 @@
   },
   "context": {
     "token_context_limit": 100000,
-    "compass_keep_last": 8
+    "compass_keep_last": 8,
+    "auto_compress_ratio": 0.8,
+    "auto_compress_max_rounds": 3
   },
   "feishu": {
     "app_id": "",

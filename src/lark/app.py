@@ -22,11 +22,12 @@ import trust
 from context.content_manager import ContentManager
 from graph_agent import build_graph
 from memory import build_system_prompt_with_memory
+from prompt_text import load_template_prompt
 from settings import ensure_settings_file, get_str
 
 logger = logging.getLogger(__name__)
 
-_CORE_SYSTEM_PROMPT = "你是简洁助手，用中文回答。"
+_CORE_SYSTEM_PROMPT = load_template_prompt("core/system_lark.txt")
 
 _chat_lock = threading.Lock()
 _chat_sessions: dict[str, tuple[list[BaseMessage], ContentManager]] = {}
