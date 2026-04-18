@@ -1,4 +1,4 @@
-"""会话 JSON 写入 log/raw/。导出 txt 见 scripts/log_export.py 与 make log。"""
+"""会话 JSON 写入 log/raw/。导出 txt 见 scripts/export_log_txt.py 与 make log。"""
 
 import json
 from datetime import UTC, datetime

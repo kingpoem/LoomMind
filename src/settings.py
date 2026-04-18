@@ -1,4 +1,4 @@
-"""仓库根目录 `settings.json`：与 `template/settings.json` 深度合并，供全局配置读取。"""
+"""仓库根 `settings.json` 与 `template/settings.json` 深度合并。"""
 
 import json
 import shutil
@@ -30,7 +30,6 @@ def template_settings_path() -> Path:
 
 
 def ensure_settings_file() -> None:
-    """首次本地运行时从 template/settings.json 复制到仓库根（目标已存在则跳过）。"""
     dest = settings_path()
     if dest.is_file():
         return
@@ -41,7 +40,7 @@ def ensure_settings_file() -> None:
     dest.write_text("{}\n", encoding="utf-8")
 
 
-def invalidate_settings_cache() -> None:
+def _invalidate_cache() -> None:
     global _settings_cache
     _settings_cache = None
 
@@ -73,7 +72,7 @@ def _load_raw() -> dict[str, Any]:
     return _deep_merge(defaults, user_data)
 
 
-def get_settings_dict() -> dict[str, Any]:
+def _merged_dict() -> dict[str, Any]:
     global _settings_cache
     if _settings_cache is None:
         _settings_cache = _load_raw()
@@ -81,7 +80,7 @@ def get_settings_dict() -> dict[str, Any]:
 
 
 def get(path: str, default: Any = None) -> Any:
-    d = get_settings_dict()
+    d = _merged_dict()
     cur: Any = d
     for k in path.split("."):
         if not isinstance(cur, dict) or k not in cur:
@@ -99,35 +98,8 @@ def get_str(path: str, default: str = "") -> str:
     return str(v)
 
 
-def require_str(path: str) -> str:
-    v = get_str(path).strip()
-    if not v:
-        msg = f"缺少配置项 {path}（settings.json）"
-        raise RuntimeError(msg)
-    return v
-
-
-def get_int(path: str, default: int) -> int:
-    v = get(path)
-    if v is None:
-        return default
-    if isinstance(v, bool):
-        return default
-    if isinstance(v, int):
-        return v
-    if isinstance(v, str) and v.strip():
-        try:
-            return int(v.strip())
-        except ValueError:
-            return default
-    return default
-
-
-def get_optional_int(path: str) -> int | None:
-    v = get(path)
-    if v is None:
-        return None
-    if isinstance(v, bool):
+def _coerce_int(v: Any) -> int | None:
+    if v is None or isinstance(v, bool):
         return None
     if isinstance(v, int):
         return v
@@ -137,6 +109,15 @@ def get_optional_int(path: str) -> int | None:
         except ValueError:
             return None
     return None
+
+
+def get_int(path: str, default: int) -> int:
+    c = _coerce_int(get(path))
+    return default if c is None else c
+
+
+def get_optional_int(path: str) -> int | None:
+    return _coerce_int(get(path))
 
 
 def _deep_set(data: dict[str, Any], path: str, value: Any) -> None:
@@ -163,11 +144,9 @@ def _deep_del(data: dict[str, Any], path: str) -> None:
 
 
 def merge_wire_llm_key(wire_key: str, value: str | None) -> None:
-    """按 TUI 协议键名写入或清除嵌套字段。"""
     json_path = WIRE_LLM_KEYS_TO_JSON.get(wire_key)
     if json_path is None:
-        msg = f"未知配置键：{wire_key!r}"
-        raise ValueError(msg)
+        raise ValueError(wire_key)
     ensure_settings_file()
     path = settings_path()
     data = json.loads(path.read_text(encoding="utf-8"))
@@ -177,14 +156,13 @@ def merge_wire_llm_key(wire_key: str, value: str | None) -> None:
         _deep_set(data, json_path, value.strip())
     text = json.dumps(data, ensure_ascii=False, indent=2) + "\n"
     path.write_text(text, encoding="utf-8")
-    invalidate_settings_cache()
+    _invalidate_cache()
 
 
 def merge_llm_provider(provider: str) -> None:
-    """将 `llm.provider` 写入仓库根 settings.json（openrouter | ollama）。"""
     v = provider.strip().lower()
     if v not in ("openrouter", "ollama"):
-        raise ValueError(f"无效 provider：{provider!r}")
+        raise ValueError(provider)
     ensure_settings_file()
     path = settings_path()
     data = json.loads(path.read_text(encoding="utf-8"))
@@ -195,11 +173,10 @@ def merge_llm_provider(provider: str) -> None:
     llm["provider"] = v
     text = json.dumps(data, ensure_ascii=False, indent=2) + "\n"
     path.write_text(text, encoding="utf-8")
-    invalidate_settings_cache()
+    _invalidate_cache()
 
 
 def merge_trust_add_trusted_path(abs_path: Path | str) -> None:
-    """将一条绝对路径加入 `trust.trusted_paths`（去重、排序后写回）。"""
     ensure_settings_file()
     path = settings_path()
     data = json.loads(path.read_text(encoding="utf-8"))
@@ -219,4 +196,4 @@ def merge_trust_add_trusted_path(abs_path: Path | str) -> None:
     trust["trusted_paths"] = sorted(set(items))
     text = json.dumps(data, ensure_ascii=False, indent=2) + "\n"
     path.write_text(text, encoding="utf-8")
-    invalidate_settings_cache()
+    _invalidate_cache()

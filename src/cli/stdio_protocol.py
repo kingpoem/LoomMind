@@ -1,4 +1,4 @@
-"""stdio NDJSON 协议：仅 stdout 为事件流，调试与 traceback 走 stderr。"""
+"""stdio：一行一 JSON，事件走 stdout。"""
 
 import json
 import sys
@@ -8,7 +8,6 @@ PROTOCOL_VERSION = 1
 
 
 def emit(event: dict[str, Any]) -> None:
-    """写一行 JSON 到 stdout。"""
     payload = dict(event)
     payload.setdefault("v", PROTOCOL_VERSION)
     sys.stdout.write(json.dumps(payload, ensure_ascii=False) + "\n")
@@ -16,7 +15,6 @@ def emit(event: dict[str, Any]) -> None:
 
 
 def read_command_line() -> dict[str, Any] | None:
-    """从 stdin 读一行 JSON；EOF 返回 None。"""
     line = sys.stdin.readline()
     if line == "":
         return None

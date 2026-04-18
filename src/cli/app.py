@@ -1,9 +1,7 @@
-"""本地终端多轮对话入口"""
+"""TUI 子进程：stdio NDJSON 多轮对话。"""
 
 import json
 import subprocess
-import sys
-import traceback
 from collections.abc import Iterable
 from pathlib import Path
 
@@ -50,7 +48,6 @@ def _auto_compress_if_over_threshold(
     llm: LLMRuntimeSettings,
     manager: ContentManager,
 ) -> tuple[list[BaseMessage], bool]:
-    """当「现有消息 + 本轮用户输入」超过上限比例时，自动执行 compass 压缩。"""
     ratio = token_auto_compress_ratio()
     if ratio <= 0:
         return messages, False
@@ -74,10 +71,6 @@ def _auto_compress_if_over_threshold(
 
 
 def _run_make_log(*, silence: bool = False) -> None:
-    """导出会话 log。
-
-    `silence=True` 时子进程不写 stdout/stderr（stdio 模式 stdout 仅能为 NDJSON）。
-    """
     root = Path(__file__).resolve().parents[2]
     if silence:
         subprocess.run(
@@ -97,11 +90,6 @@ def _run_make_log(*, silence: bool = False) -> None:
 
 
 class _Session:
-    """会话级配置：模型 / 启用的 skills / 启用的 mcps。
-
-    `enabled_skills`/`enabled_mcps` 为 `None` 时表示「全部启用」。
-    """
-
     def __init__(self) -> None:
         self.llm = LLMRuntimeSettings()
         self.model_name: str = default_model_name(llm=self.llm)
@@ -146,9 +134,7 @@ class _Session:
                     elif p == LLMProvider.OPENROUTER:
                         self.llm.provider = LLMProvider.OPENROUTER
                     else:
-                        raise ValueError(
-                            f"未知 provider：{v!r}，请使用 openrouter 或 ollama"
-                        )
+                        raise ValueError(p)
             for json_key, attr in (
                 ("openrouter_api_key", "openrouter_api_key"),
                 ("ollama_api_key", "ollama_api_key"),
@@ -169,7 +155,7 @@ class _Session:
 
     def set_model(self, name: str) -> str:
         if name not in self.available_models:
-            raise ValueError(f"未知模型：{name}")
+            raise ValueError(name)
         self.model_name = name
         self.graph = self._build()
         return name
@@ -178,7 +164,7 @@ class _Session:
         wanted = set(names)
         unknown = wanted - set(self.available_skills)
         if unknown:
-            raise ValueError(f"未知 skill：{sorted(unknown)}")
+            raise ValueError(str(sorted(unknown)))
         self.enabled_skills = wanted
         self.graph = self._build()
         return sorted(self.enabled_skills)
@@ -187,18 +173,14 @@ class _Session:
         wanted = set(names)
         unknown = wanted - set(self.available_mcps)
         if unknown:
-            raise ValueError(f"未知 mcp：{sorted(unknown)}")
+            raise ValueError(str(sorted(unknown)))
         self.enabled_mcps = wanted
         self.graph = self._build()
         return sorted(self.enabled_mcps)
 
     def set_max_plan_cycles(self, n: int | None) -> int:
-        """设置单条用户消息内的规划循环上限。
-
-        `None` 表示仅使用 settings.json 的 `planning.max_cycles`。
-        """
         if n is not None and n < 1:
-            raise ValueError("max_plan_cycles 须 >= 1")
+            raise ValueError(str(n))
         self.max_plan_cycles = n
         self.graph = self._build()
         return resolve_planning_max_cycles(n)
@@ -285,11 +267,8 @@ def _emit_llm_config(session: _Session) -> None:
 
 
 def run_cli_stdio() -> None:
-    """TUI 后端：经 stdin/stdout NDJSON 与 Ratatui 前端通信。"""
     set_confirmation_callback(stdio_tool_confirm)
     set_notification_callback(stdio_tool_notify)
-    # 信任：先读 settings；当前 cwd 落在 trust.trusted_paths 内则不调 prompter、不发 trust_request。
-    # 未信任则 stdio 发 trust_request，TUI 在收到 ready 前用 overlay 阻塞输入。
     trust.ensure_trust_at_startup(stdio_trust_prompt)
     session = _Session()
     manager = ContentManager()
@@ -301,7 +280,7 @@ def run_cli_stdio() -> None:
     emit(
         {
             "type": "ready",
-            "message": "已就绪",
+            "message": "就绪",
             "model": session.model_name,
             "llm_provider": session.llm.effective_provider().value,
             "max_plan_cycles": resolve_planning_max_cycles(session.max_plan_cycles),
@@ -312,7 +291,7 @@ def run_cli_stdio() -> None:
             try:
                 raw = read_command_line()
             except json.JSONDecodeError as e:
-                emit({"type": "error", "message": f"无效 JSON: {e}"})
+                emit({"type": "error", "message": str(e)})
                 continue
             if raw is None:
                 emit({"type": "session_end", "reason": "eof"})
@@ -355,10 +334,7 @@ def run_cli_stdio() -> None:
                     emit(
                         {
                             "type": "error",
-                            "message": (
-                                f"无效 provider：{raw.get('name')!r}；"
-                                "请使用 openrouter 或 ollama"
-                            ),
+                            "message": "provider 须为 openrouter 或 ollama",
                         }
                     )
                     continue
@@ -427,16 +403,11 @@ def run_cli_stdio() -> None:
 
             if cmd_type == "set_env_persist":
                 if not isinstance(raw, dict):
-                    emit({"type": "error", "message": "set_env_persist 须为 JSON 对象"})
+                    emit({"type": "error", "message": "set_env_persist 须为对象"})
                     continue
                 key = str(raw.get("key", "")).strip()
                 if key not in _PERSISTABLE_ENV_KEYS:
-                    emit(
-                        {
-                            "type": "error",
-                            "message": f"不允许写入的配置键：{key!r}",
-                        }
-                    )
+                    emit({"type": "error", "message": key})
                     continue
                 val_raw = raw.get("value")
                 val_s = "" if val_raw is None else str(val_raw)
@@ -451,7 +422,7 @@ def run_cli_stdio() -> None:
                         session.model_name = default_model_name(llm=session.llm)
                     session.graph = session._build()
                 except (OSError, ValueError) as e:
-                    emit({"type": "error", "message": f"写入 settings.json 失败: {e}"})
+                    emit({"type": "error", "message": str(e)})
                 else:
                     remaining = collect_post_model_config_items(session)
                     emit(
@@ -468,19 +439,19 @@ def run_cli_stdio() -> None:
                 continue
             if cmd_type == "set_llm_config":
                 if not isinstance(raw, dict):
-                    emit({"type": "error", "message": "set_llm_config 须为 JSON 对象"})
+                    emit({"type": "error", "message": "set_llm_config 须为对象"})
                     continue
                 try:
                     session.apply_llm_config(raw)
                 except ValueError as e:
                     emit({"type": "error", "message": str(e)})
                 else:
-                    emit({"type": "llm_config_set", "message": "已应用 LLM 配置"})
+                    emit({"type": "llm_config_set", "message": "ok"})
                     _emit_llm_config(session)
                 continue
 
             if cmd_type != "user_message":
-                emit({"type": "error", "message": f"未知指令类型: {cmd_type!r}"})
+                emit({"type": "error", "message": str(cmd_type)})
                 continue
 
             user_text = (raw.get("text") or "").strip()
@@ -495,14 +466,11 @@ def run_cli_stdio() -> None:
                 manager=manager,
             )
             if auto_compressed:
+                pct = round(token_auto_compress_ratio() * 100)
                 emit(
                     {
                         "type": "system",
-                        "message": (
-                            "上下文用量已超过上限的 "
-                            f"{round(token_auto_compress_ratio() * 100)}%，"
-                            "已自动压缩早期对话。"
-                        ),
+                        "message": f"上下文超过 {pct}% 阈值，已压缩",
                     }
                 )
                 used = count_messages_tokens(messages)
@@ -516,14 +484,11 @@ def run_cli_stdio() -> None:
 
             prospective = count_messages_tokens([*messages, pending])
             if prospective > token_context_limit():
+                lim = token_context_limit()
                 emit(
                     {
                         "type": "system",
-                        "message": (
-                            f"本轮输入后约 {prospective:,} token，"
-                            f"已超过上限 {token_context_limit():,}，"
-                            "请缩短对话或新开会话后再试。"
-                        ),
+                        "message": f"约 {prospective:,} token，超过上限 {lim:,}",
                     }
                 )
                 continue
@@ -564,7 +529,6 @@ def run_cli_stdio() -> None:
                                     }
                                 )
             except Exception as e:
-                traceback.print_exc(file=sys.stderr)
                 emit({"type": "error", "message": str(e)})
                 manager.persist(messages)
                 continue
