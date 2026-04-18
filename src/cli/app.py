@@ -22,6 +22,7 @@ from context.compass import compass_compress
 from context.token_budget import TOKEN_CONTEXT_LIMIT, count_messages_tokens
 from graph_agent import build_graph, list_available_mcps, list_available_skills
 from memory import build_system_prompt_with_memory, record_compass_digest
+from planning import resolve_planning_max_cycles
 from tools.loader import set_confirmation_callback, set_notification_callback
 
 from .response_check import ResponseAction, detect_reply_command
@@ -176,6 +177,7 @@ class _Session:
         # 默认启用全部
         self.enabled_skills: set[str] = set(self.available_skills)
         self.enabled_mcps: set[str] = set(self.available_mcps)
+        self.max_plan_cycles: int | None = None
         self.graph = self._build()
 
     def _build(self):
@@ -183,6 +185,7 @@ class _Session:
             model_name=self.model_name,
             enabled_skills=sorted(self.enabled_skills),
             enabled_mcps=sorted(self.enabled_mcps),
+            max_cycles=self.max_plan_cycles,
         )
 
     def set_model(self, name: str) -> str:
@@ -209,6 +212,17 @@ class _Session:
         self.enabled_mcps = wanted
         self.graph = self._build()
         return sorted(self.enabled_mcps)
+
+    def set_max_plan_cycles(self, n: int | None) -> int:
+        """设置单条用户消息内的规划循环上限。
+
+        `None` 表示仅使用环境变量 `LOOMMIND_MAX_PLAN_CYCLES`。
+        """
+        if n is not None and n < 1:
+            raise ValueError("max_plan_cycles 须 >= 1")
+        self.max_plan_cycles = n
+        self.graph = self._build()
+        return resolve_planning_max_cycles(n)
 
 
 def _emit_models(session: _Session) -> None:
@@ -259,6 +273,7 @@ def run_cli_stdio() -> None:
             "type": "ready",
             "message": "已就绪",
             "model": session.model_name,
+            "max_plan_cycles": resolve_planning_max_cycles(session.max_plan_cycles),
         }
     )
     try:
@@ -317,6 +332,19 @@ def run_cli_stdio() -> None:
                     emit({"type": "error", "message": str(e)})
                 else:
                     emit({"type": "mcps_set", "selected": selected})
+                continue
+
+            if cmd_type == "set_plan_cycles":
+                raw_n = raw.get("max_cycles")
+                try:
+                    if raw_n is None:
+                        n = session.set_max_plan_cycles(None)
+                    else:
+                        n = session.set_max_plan_cycles(int(raw_n))
+                except (TypeError, ValueError) as e:
+                    emit({"type": "error", "message": f"无效 max_cycles: {e}"})
+                else:
+                    emit({"type": "plan_cycles_set", "max_plan_cycles": n})
                 continue
 
             if cmd_type != "user_message":

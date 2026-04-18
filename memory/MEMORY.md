@@ -2,6 +2,12 @@
 
 长期约定、术语与操作说明；**主要由人工维护**。启动会话时，系统提示会附带本文件的节选（有长度上限），完整内容始终以本文件为准。
 
+## 长任务与规划（ReAct）
+
+- **单条用户消息**：规划图在一条消息内做多轮「思考 → 工具 → 观察」，轮数上限由 `max_cycles` 控制（默认 6，环境变量 `LOOMMIND_MAX_PLAN_CYCLES`，stdio 可发 `set_plan_cycles` 覆盖会话级设置）。
+- **更长流程**：提高 `max_cycles`，或拆成多条用户消息；子目标可由模型在首轮列出（编号/列表），并写入 `planning_long_term.md` 的条目中。
+- **上下文长度**：步数与 token 无必然同步上限；长对话请用 `/compass` 压缩早期轮次，并依赖本手册与 `memory_summary.md` 控制注入体积。
+
 ## 本仓库 `memory/` 目录分工
 
 | 文件 | 作用 |
@@ -27,17 +33,6 @@
 - **有界块**：用 `/END` 闭合块，便于检索与局部加载；可标注事件边界、时间漂移说明等。
 - **Git**：需要追溯时可用 `git log -p`、`git diff`、`git blame` 等；与本仓库自动化无关时亦可仅在理念层参考。
 
-## 可选：扩展目录布局（若单独用 Markdown 树托管人物/时间线）
-
-若将来在**独立目录**中维护更细粒度记忆（非当前 `memory/` 三文件），可采用扁平结构示例：
-
-- `memories/people/*.md`：人物/自述侧写  
-- `memories/contexts/*.md`：主题事实  
-- `timeline/YYYY-MM.md`：按月时间线  
-- `index.md` / `episodes_index.md`：索引（可手工或工具生成）  
-
-具体模板与链接约定见上文「可编辑块」与「记忆分化」；**与 LoomMind 核心代码无硬绑定**，按需采用。
-
 ## 会话到记忆的写入管线（概念参考）
 
 自动化或半自动化将对话沉淀为文件时，典型阶段包括（实现可分散在 compass、规划模块或未来写入器中）：
@@ -47,14 +42,3 @@
 3. 基于语义上下文的搜索替换更新正文（避免纯行号）。  
 4. 更新时间线或摘要类文件；重建或增量更新索引类文件。  
 5. 变更留在工作区直至**显式提交**（若使用 Git），以保证可审阅、可回滚。
-
-相关字段概念（与外部实现互通时）：`session_transcript`、`staged_changes`、`semantic_index`、`memory_strength`、`master_index` 等。
-
-## 项目约定
-
-（编码风格、目录约定、安全与隐私边界等。）
-
-## 工具与命令
-
-- `make graph`：根据 `src` 内 LangGraph 定义生成 `log/langgraph.md`
-- `make log`：将 `log/raw/*.json` 导出为 `log/content/*.txt`

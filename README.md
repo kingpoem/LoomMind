@@ -16,7 +16,11 @@
 
 ### Planning（规划）
 
-规划层用 LangGraph 把「想—做—看—再想」固化成图，而不是单次 `invoke` 里隐式工具循环。`thought` 节点在带记忆的系统提示下决定是否调用工具或直接回答；有 `tool_calls` 则进入预置 `ToolNode`（`action`），否则进入 `remember`。`observation` 把最近一批 `ToolMessage` 压成短句写入短期记忆，并在输出里出现错误痕迹时追加一条「先修正再行动」的提示，把失败反馈显式喂回下一轮 `thought`。`next_step` 递增循环计数，达到 `max_cycles` 时进入 `finalize`，用无工具绑定的模型强制收束最终答复，防止在工具边界上死循环。`planning_trace` 记录节点级摘要，便于导出图或对照日志。`remember` 在循环推进后把「目标—观察—结果」式条目写入规划长期记忆文件。设计意图是可解释、有上限、对失败敏感，而不是无界 ReAct。
+**规划模式现状（简要）**：每条用户消息触发一次完整规划图运行；在单条消息内，模型按 `thought →（可选）action → observation → next_step` 迭代，每轮 `thought` 都会把全量对话与本轮 Planner 系统提示一并送入模型，步数受 `max_cycles` 约束（默认 6，可用环境变量 `LOOMMIND_MAX_PLAN_CYCLES` 或 stdio 的 `set_plan_cycles` 调整，上限 64），达到上限则进入无工具的 `finalize` 强制收尾。`cycle_count`、`task_outline` 等仅存在于当次图运行，不跨用户轮次保留；更长流程需提高上限、拆成多条消息，或依赖对话历史与 `memory/`、`/compass` 控制 token。整体是**有界 ReAct**，而非无限工具循环。
+
+规划层用 LangGraph 把「想—做—看—再想」固化成图（ReAct 四阶段语义写在 `thought` 的Planner提示中：规划拆解、探索执行、观察重试、收尾交付），而不是单次 `invoke` 里隐式工具循环。`thought` 节点在带记忆的系统提示下决定是否调用工具或直接回答；首轮可从模型正文中启发式抽取编号/列表子目标写入 `task_outline`，并在后续轮次与 `finalize`、长期记忆条目中复用。有 `tool_calls` 则进入预置 `ToolNode`（`action`），否则进入 `remember`。`observation` 把最近一批 `ToolMessage` 压成短句写入短期记忆，并在输出里出现错误痕迹时追加可操作的失败提示，把失败反馈显式喂回下一轮 `thought`。`next_step` 递增循环计数，达到 `max_cycles` 时进入 `finalize`，用无工具绑定的模型强制收束最终答复，防止在工具边界上死循环。
+
+**单条用户消息**内的工具链长度受 `max_cycles` 约束（默认 6，可通过环境变量 `LOOMMIND_MAX_PLAN_CYCLES` 或在 stdio 会话中发送 `set_plan_cycles` 调整；上限 64）。需要更长链路时可提高该值，或把任务拆成多条用户消息（每条消息会重新跑一轮规划图；跨条的进度靠对话历史与 `memory/` 衔接）。上下文 token 压力仍受 `token_budget` 约束，长会话可配合 CLI/TUI 的 `/compass` 与会话摘要，避免「步数放开」后把整段历史原样撑满窗口。`planning_trace` 记录节点级摘要，便于导出图或对照日志。`remember` 在循环推进后把「目标—子目标—观察—结果」式条目写入规划长期记忆文件。设计意图是可解释、有上限、对失败敏感，而不是无界 ReAct。
 
 ### Tool use（工具使用）
 
