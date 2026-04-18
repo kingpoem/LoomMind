@@ -159,15 +159,7 @@ pub fn handle_key(
                 app.popup.move_up(len);
                 return Ok(());
             }
-            (KeyCode::Char('k'), m) if !m.contains(KeyModifiers::CONTROL) => {
-                app.popup.move_up(len);
-                return Ok(());
-            }
             (KeyCode::Down, _) => {
-                app.popup.move_down(len);
-                return Ok(());
-            }
-            (KeyCode::Char('j'), m) if !m.contains(KeyModifiers::CONTROL) => {
                 app.popup.move_down(len);
                 return Ok(());
             }

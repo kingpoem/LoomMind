@@ -630,7 +630,7 @@ pub fn render_trust_approval(frame: &mut Frame, area: Rect, approval: &TrustAppr
 
     let prompt_line = "  是否信任 AI 访问当前工作区？".to_string();
     let ws_line = format!("  路径: {}", approval.workspace);
-    let hint_effect = "  这将允许AI不经过你的同意读取该目录下的文件。".to_string();
+    let hint_effect = "  这将允许AI读取该目录下的文件。".to_string();
 
     let rows = [prompt_line, ws_line, hint_effect];
     let mut y = inner.y;

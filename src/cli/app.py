@@ -1,4 +1,4 @@
-"""本地终端多轮对话入口（流式输出，支持工具调用）。"""
+"""本地终端多轮对话入口"""
 
 import json
 import subprocess
@@ -55,7 +55,7 @@ def _tty_trust_prompt(workspace: Path) -> bool:
     if not sys.stdin.isatty():
         return False
     print(f"是否信任 AI 访问当前工作区 {workspace}？")
-    ans = input("这将允许AI不经过你的同意读取该目录下的文件。[y/N] ").strip().lower()
+    ans = input("这将允许AI读取该目录下的文件。[y/N] ").strip().lower()
     return ans in ("y", "yes")
 
 

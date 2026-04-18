@@ -53,13 +53,13 @@ fn render_streaming_preview(frame: &mut Frame, zone: Rect, app: &App) {
 
     let title = Line::from(vec![
         Span::styled("• ", Style::default().fg(palette::DIM)),
-        Span::styled("助手（流式输出）", Style::default().fg(palette::DIM)),
+        Span::styled("助手", Style::default().fg(palette::DIM)),
     ]);
     render_buffer_line(frame, zone.y, &title, zone.width, zone.x);
 
     let content_width = width.saturating_sub(2).max(1);
     let content_lines = if app.assistant_buf.is_empty() {
-        vec!["等待模型输出…".to_string()]
+        vec!["Working...".to_string()]
     } else {
         wrap_for_preview(&app.assistant_buf, content_width)
     };
