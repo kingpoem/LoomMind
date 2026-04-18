@@ -2,7 +2,7 @@
 
 import importlib
 import logging
-from collections.abc import Callable, Iterable, Mapping
+from collections.abc import Callable, Mapping
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -63,41 +63,29 @@ def _coerce_spec(value) -> ToolSpec | None:
 def _ingest_register_result(module_name: str, result) -> None:
     """把 `register(mcp)` 的返回值登记到确认集合、类别表、预览表。
 
-    兼容以下形状：
-    - `Iterable[str]`：旧行为，登记为「需确认，类别视作最严格的 EXEC」。
-    - `Iterable[tuple[str, TrustCategory | ToolSpec]]`：显式声明类别（可带预览）。
-    - `Mapping[str, TrustCategory | ToolSpec]`：显式声明类别（推荐）。
+    须为 `Mapping[str, TrustCategory | ToolSpec]`。
     """
     if result is None:
         return
-    pairs: list[tuple[str, ToolSpec]] = []
-    if isinstance(result, Mapping):
-        for name, value in result.items():
-            spec = _coerce_spec(value)
-            if not isinstance(name, str) or spec is None:
-                logger.warning(
-                    "%s.register 返回 Mapping 项类型错误：%r -> %r，忽略",
-                    module_name,
-                    name,
-                    value,
-                )
-                continue
-            pairs.append((name, spec))
-    elif isinstance(result, Iterable):
-        for item in result:
-            if isinstance(item, str):
-                # 旧风格：默认作为 EXEC 处理，信任态也不会自动放行。
-                pairs.append((item, ToolSpec(TrustCategory.EXEC)))
-                continue
-            if isinstance(item, tuple) and len(item) == 2 and isinstance(item[0], str):
-                spec = _coerce_spec(item[1])
-                if spec is not None:
-                    pairs.append((item[0], spec))
-                    continue
-            logger.warning("%s.register 返回项无法识别：%r，忽略", module_name, item)
-    else:
-        logger.warning("%s.register 返回值不可迭代：%r，忽略", module_name, result)
+    if not isinstance(result, Mapping):
+        logger.warning(
+            "%s.register 须返回 Mapping[str, TrustCategory | ToolSpec]，收到 %r，忽略",
+            module_name,
+            type(result).__name__,
+        )
         return
+    pairs: list[tuple[str, ToolSpec]] = []
+    for name, value in result.items():
+        spec = _coerce_spec(value)
+        if not isinstance(name, str) or spec is None:
+            logger.warning(
+                "%s.register 返回 Mapping 项类型错误：%r -> %r，忽略",
+                module_name,
+                name,
+                value,
+            )
+            continue
+        pairs.append((name, spec))
 
     for name, spec in pairs:
         _tools_requiring_confirmation.add(name)
@@ -109,8 +97,7 @@ def _ingest_register_result(module_name: str, result) -> None:
 def _load_builtin_tools() -> None:
     """导入 src/tools/list/*.py，调用其 register(mcp) 注册工具。
 
-    register(mcp) 的返回值描述「调用前需用户确认」的工具及其信任类别，
-    具体形状见 `_ingest_register_result`。
+    register(mcp) 的返回值须为 Mapping，描述「调用前需用户确认」的工具及其信任类别。
     """
     list_dir = Path(__file__).parent / "list"
     if not list_dir.is_dir():

@@ -16,23 +16,6 @@ WIRE_LLM_KEYS_TO_JSON: dict[str, str] = {
     "OLLAMA_API_KEY": "llm.ollama.api_key",
 }
 
-_FLAT_TOP_KEYS: frozenset[str] = frozenset(
-    {
-        "llm_provider",
-        "openrouter_api_key",
-        "ollama_base_url",
-        "ollama_model",
-        "ollama_api_key",
-        "max_plan_cycles",
-        "feishu_app_id",
-        "feishu_app_secret",
-        "feishu_verification_token",
-        "feishu_user_access_token",
-        "feishu_encrypt_key",
-        "feishu_user_open_id",
-    }
-)
-
 
 def repo_root() -> Path:
     return Path(__file__).resolve().parents[1]
@@ -80,40 +63,6 @@ def _default_settings() -> dict[str, Any]:
     return json.loads(p.read_text(encoding="utf-8"))
 
 
-def _migrate_flat_if_needed(data: dict[str, Any]) -> dict[str, Any]:
-    if isinstance(data.get("llm"), dict):
-        return data
-    if not any(k in data for k in _FLAT_TOP_KEYS):
-        return data
-    new: dict[str, Any] = {k: v for k, v in data.items() if k not in _FLAT_TOP_KEYS}
-    new["llm"] = {
-        "provider": data.get("llm_provider", "openrouter"),
-        "openrouter": {"api_key": data.get("openrouter_api_key", "")},
-        "ollama": {
-            "base_url": data.get("ollama_base_url", ""),
-            "model": data.get("ollama_model", ""),
-            "api_key": data.get("ollama_api_key", ""),
-        },
-    }
-    if "max_plan_cycles" in data:
-        new.setdefault("planning", {})["max_cycles"] = data["max_plan_cycles"]
-    feishu: dict[str, Any] = {}
-    m = {
-        "feishu_app_id": "app_id",
-        "feishu_app_secret": "app_secret",
-        "feishu_verification_token": "verification_token",
-        "feishu_user_access_token": "user_access_token",
-        "feishu_encrypt_key": "encrypt_key",
-        "feishu_user_open_id": "user_open_id",
-    }
-    for old_k, new_k in m.items():
-        if old_k in data:
-            feishu[new_k] = data[old_k]
-    if feishu:
-        new["feishu"] = _deep_merge(new.get("feishu") or {}, feishu)
-    return new
-
-
 def _load_raw() -> dict[str, Any]:
     ensure_settings_file()
     defaults = _default_settings()
@@ -121,7 +70,6 @@ def _load_raw() -> dict[str, Any]:
     if not user_path.is_file():
         return defaults
     user_data = json.loads(user_path.read_text(encoding="utf-8"))
-    user_data = _migrate_flat_if_needed(user_data)
     return _deep_merge(defaults, user_data)
 
 
@@ -223,7 +171,6 @@ def merge_wire_llm_key(wire_key: str, value: str | None) -> None:
     ensure_settings_file()
     path = settings_path()
     data = json.loads(path.read_text(encoding="utf-8"))
-    data = _migrate_flat_if_needed(data)
     if value is None or not value.strip():
         _deep_del(data, json_path)
     else:
@@ -241,12 +188,35 @@ def merge_llm_provider(provider: str) -> None:
     ensure_settings_file()
     path = settings_path()
     data = json.loads(path.read_text(encoding="utf-8"))
-    data = _migrate_flat_if_needed(data)
     llm = data.get("llm")
     if not isinstance(llm, dict):
         llm = {}
         data["llm"] = llm
     llm["provider"] = v
+    text = json.dumps(data, ensure_ascii=False, indent=2) + "\n"
+    path.write_text(text, encoding="utf-8")
+    invalidate_settings_cache()
+
+
+def merge_trust_add_trusted_path(abs_path: Path | str) -> None:
+    """将一条绝对路径加入 `trust.trusted_paths`（去重、排序后写回）。"""
+    ensure_settings_file()
+    path = settings_path()
+    data = json.loads(path.read_text(encoding="utf-8"))
+    key = str(Path(abs_path).resolve())
+    trust = data.setdefault("trust", {})
+    if not isinstance(trust, dict):
+        trust = {}
+        data["trust"] = trust
+    raw = trust.get("trusted_paths")
+    items: list[str] = []
+    if isinstance(raw, list):
+        for x in raw:
+            if isinstance(x, str) and x.strip():
+                items.append(x.strip())
+    if key not in items:
+        items.append(key)
+    trust["trusted_paths"] = sorted(set(items))
     text = json.dumps(data, ensure_ascii=False, indent=2) + "\n"
     path.write_text(text, encoding="utf-8")
     invalidate_settings_cache()

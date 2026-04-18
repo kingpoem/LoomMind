@@ -4,13 +4,15 @@
 - `workspace_root()` 被 `memory/injection.py` 注入到系统提示；
 - 工具分类 `TrustCategory` 由 `tools/server.py` 登记，`auto_approve` 只放行
   「信任后也应当直接放行」的类别（当前仅 READ_FS）。
+- 持久化：`settings.json` 的 `trust.trusted_paths`（绝对路径字符串列表）。
+  当前工作区路径若与列表中任一条相同，或是其中某条的子路径，则视为已信任。
 """
-
-from __future__ import annotations
 
 import enum
 from collections.abc import Callable
 from pathlib import Path
+
+from settings import get, merge_trust_add_trusted_path
 
 
 class TrustCategory(enum.Enum):
@@ -45,6 +47,40 @@ def set_trusted(value: bool) -> None:
     _trusted = bool(value)
 
 
+def _trusted_paths_from_settings() -> list[str]:
+    raw = get("trust.trusted_paths", [])
+    if not isinstance(raw, list):
+        return []
+    out: list[str] = []
+    for x in raw:
+        if isinstance(x, str) and x.strip():
+            out.append(x.strip())
+    return out
+
+
+def workspace_matches_trusted_paths(workspace: Path, trusted_paths: list[str]) -> bool:
+    """若 `workspace` 解析后与列表中某条相同，或是该条的子路径，则返回 True。"""
+    try:
+        p = workspace.resolve()
+    except OSError:
+        return False
+    for entry in trusted_paths:
+        try:
+            root = Path(entry).resolve()
+        except OSError:
+            continue
+        if p == root or p.is_relative_to(root):
+            return True
+    return False
+
+
+def is_persisted_workspace_trusted() -> bool:
+    """当前 `workspace_root()` 是否落在 `trust.trusted_paths` 的信任范围内。"""
+    return workspace_matches_trusted_paths(
+        workspace_root(), _trusted_paths_from_settings()
+    )
+
+
 def auto_approve(tool_name: str) -> bool:
     """信任态下该工具是否免确认。
 
@@ -62,8 +98,19 @@ def auto_approve(tool_name: str) -> bool:
     return cat in _AUTO_APPROVE_WHEN_TRUSTED
 
 
-def prompt_for_trust(prompter: Callable[[Path], bool]) -> bool:
-    """由各前端提供 prompter；其返回值被记入全局态。"""
-    decision = bool(prompter(workspace_root()))
+def ensure_trust_at_startup(prompter: Callable[[Path], bool]) -> bool:
+    """启动时解析工作区信任：已写入 settings 则直接跳过弹窗，否则调用 prompter。
+
+    已信任：仅 `set_trusted(True)`，不发送 `trust_request`（stdio/TUI 无遮挡）。
+    未信任：执行 `prompter`（如弹出是否信任）；用户同意则把当前工作区绝对路径写入列表。
+    返回最终是否处于信任态。
+    """
+    if is_persisted_workspace_trusted():
+        set_trusted(True)
+        return True
+    root = workspace_root()
+    decision = bool(prompter(root))
     set_trusted(decision)
+    if decision:
+        merge_trust_add_trusted_path(root)
     return decision

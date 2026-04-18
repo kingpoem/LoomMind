@@ -10,8 +10,7 @@ from .stdio_protocol import emit, read_command_line
 
 logger = logging.getLogger(__name__)
 
-# 工具类别 → 给用户看的中文权限说明。取代旧的 per-tool 硬编码表，
-# 以 `tools/server.py :: tool_category` 登记的 TrustCategory 为唯一来源。
+# 工具类别 → 给用户看的中文权限说明（与 `tools/server.py` 登记的 TrustCategory 一致）。
 _CATEGORY_HINTS: dict[TrustCategory, str] = {
     TrustCategory.READ_FS: "读取本地文件",
     TrustCategory.WRITE_FS: "写入本地文件",

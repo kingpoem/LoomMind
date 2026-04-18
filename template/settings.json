@@ -41,5 +41,8 @@
     "user_access_token": "",
     "encrypt_key": "",
     "user_open_id": ""
+  },
+  "trust": {
+    "trusted_paths": []
   }
 }

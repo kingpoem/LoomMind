@@ -288,8 +288,9 @@ def run_cli_stdio() -> None:
     """TUI 后端：经 stdin/stdout NDJSON 与 Ratatui 前端通信。"""
     set_confirmation_callback(stdio_tool_confirm)
     set_notification_callback(stdio_tool_notify)
-    # 信任询问先于 ready：TUI 在收到 ready 前用 overlay 阻塞输入。
-    trust.prompt_for_trust(stdio_trust_prompt)
+    # 信任：先读 settings；当前 cwd 落在 trust.trusted_paths 内则不调 prompter、不发 trust_request。
+    # 未信任则 stdio 发 trust_request，TUI 在收到 ready 前用 overlay 阻塞输入。
+    trust.ensure_trust_at_startup(stdio_trust_prompt)
     session = _Session()
     manager = ContentManager()
     messages: list[BaseMessage] = [
