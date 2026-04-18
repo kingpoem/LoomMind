@@ -116,10 +116,24 @@ pub fn handle_child_event(term: &mut Term, app: &mut App, ev: ChildEvent) -> io:
             tool,
             args,
             permissions,
+            preview,
         } => {
+            // 先让历史把此前缓冲的助手流落盘，后面的系统行才能按真实时序排列。
+            if !app.assistant_buf.is_empty() {
+                let buf = std::mem::take(&mut app.assistant_buf);
+                insert_assistant(term, &buf)?;
+            }
             app.overlay = Overlay::Approval(ToolApproval::new(id, tool.clone(), args, permissions));
             app.status = "等待工具授权…".into();
             insert_system(term, &format!("工具 {tool} 请求执行权限，请确认。"))?;
+            if let Some(body) = preview {
+                for line in body.split('\n') {
+                    if line.is_empty() {
+                        continue;
+                    }
+                    insert_system(term, line)?;
+                }
+            }
         }
         ChildEvent::ToolInvoked { tool, args } => {
             // 先把正在缓冲的助手流内容落到历史，使系统行能按真实时间顺序出现。

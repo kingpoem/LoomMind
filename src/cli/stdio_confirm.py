@@ -31,6 +31,23 @@ def _permissions_for(tool_name: str) -> list[str]:
     return [hint] if hint else []
 
 
+def _preview_for(tool_name: str, args: dict) -> str | None:
+    """查询工具登记的 preview 函数并运行；缺省或异常都返回 None。"""
+    from tools.server import tool_preview
+
+    fn = tool_preview(tool_name)
+    if fn is None:
+        return None
+    try:
+        text = fn(args)
+    except Exception:
+        logger.exception("工具 %s 预览执行失败", tool_name)
+        return None
+    if not text or not isinstance(text, str):
+        return None
+    return text
+
+
 def _safe_args(args: dict) -> dict:
     """把 args 转成可 JSON 序列化的形式；无法序列化的对象 fallback 为 str。"""
     return json.loads(json.dumps(args, ensure_ascii=False, default=str))
@@ -39,15 +56,17 @@ def _safe_args(args: dict) -> dict:
 def stdio_tool_confirm(tool_name: str, args: dict) -> bool:
     req_id = uuid.uuid4().hex
     safe_args = _safe_args(args)
-    emit(
-        {
-            "type": "tool_confirm_request",
-            "id": req_id,
-            "tool": tool_name,
-            "args": safe_args,
-            "permissions": _permissions_for(tool_name),
-        }
-    )
+    payload: dict = {
+        "type": "tool_confirm_request",
+        "id": req_id,
+        "tool": tool_name,
+        "args": safe_args,
+        "permissions": _permissions_for(tool_name),
+    }
+    preview = _preview_for(tool_name, args)
+    if preview is not None:
+        payload["preview"] = preview
+    emit(payload)
     while True:
         raw = read_command_line()
         if raw is None:
