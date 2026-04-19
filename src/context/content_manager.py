@@ -18,9 +18,7 @@ class ContentManager:
 
     def __init__(self, log_dir: Path | None = None) -> None:
         self.raw_dir = log_dir or (_repo_root() / "log" / "raw")
-        self.session_id = (
-            datetime.now(UTC).strftime("%Y%m%dT%H%M%S") + f"_{uuid4().hex[:8]}"
-        )
+        self.session_id = datetime.now(UTC).strftime("%Y%m%dT%H%M%S") + f"_{uuid4().hex[:8]}"
         self.raw_dir.mkdir(parents=True, exist_ok=True)
 
     def session_payload(self, messages: list[BaseMessage]) -> dict[str, Any]:
@@ -33,9 +31,7 @@ class ContentManager:
 
     def dumps_session(self, messages: list[BaseMessage], *, indent: int = 2) -> str:
         """将当前会话快照序列化为 JSON 字符串。"""
-        return json.dumps(
-            self.session_payload(messages), ensure_ascii=False, indent=indent
-        )
+        return json.dumps(self.session_payload(messages), ensure_ascii=False, indent=indent)
 
     def persist(self, messages: list[BaseMessage]) -> Path:
         """把当前消息列表写入 log/raw/<session_id>.json 并返回路径。"""

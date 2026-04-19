@@ -22,9 +22,7 @@ class TrustCategory(enum.Enum):
     NETWORK = "network"
 
 
-_AUTO_APPROVE_WHEN_TRUSTED: frozenset[TrustCategory] = frozenset(
-    {TrustCategory.READ_FS}
-)
+_AUTO_APPROVE_WHEN_TRUSTED: frozenset[TrustCategory] = frozenset({TrustCategory.READ_FS})
 
 _trusted: bool = False
 _workspace_root: Path | None = None
@@ -76,9 +74,7 @@ def workspace_matches_trusted_paths(workspace: Path, trusted_paths: list[str]) -
 
 def is_persisted_workspace_trusted() -> bool:
     """当前 `workspace_root()` 是否落在 `trust.trusted_paths` 的信任范围内。"""
-    return workspace_matches_trusted_paths(
-        workspace_root(), _trusted_paths_from_settings()
-    )
+    return workspace_matches_trusted_paths(workspace_root(), _trusted_paths_from_settings())
 
 
 def auto_approve(tool_name: str) -> bool:

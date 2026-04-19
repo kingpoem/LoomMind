@@ -46,16 +46,8 @@ def _chat_id(message: Any) -> str | None:
 def _extract_text(message: Any) -> str | None:
     if message is None:
         return None
-    msg_type = (
-        message.get("message_type")
-        if isinstance(message, dict)
-        else getattr(message, "message_type", None)
-    )
-    content = (
-        message.get("content")
-        if isinstance(message, dict)
-        else getattr(message, "content", None)
-    )
+    msg_type = message.get("message_type") if isinstance(message, dict) else getattr(message, "message_type", None)
+    content = message.get("content") if isinstance(message, dict) else getattr(message, "content", None)
     if msg_type != "text" or not content:
         return None
     try:
@@ -67,11 +59,7 @@ def _extract_text(message: Any) -> str | None:
 def _sender_open_id(sender: Any) -> str | None:
     if sender is None:
         return None
-    sid = (
-        sender.get("sender_id")
-        if isinstance(sender, dict)
-        else getattr(sender, "sender_id", None)
-    )
+    sid = sender.get("sender_id") if isinstance(sender, dict) else getattr(sender, "sender_id", None)
     if sid is None:
         return None
     if isinstance(sid, dict):
@@ -85,9 +73,7 @@ def _session_for_chat(chat_id: str) -> tuple[list[BaseMessage], ContentManager]:
         if entry is None:
             manager = ContentManager()
             msgs: list[BaseMessage] = [
-                SystemMessage(
-                    content=build_system_prompt_with_memory(_CORE_SYSTEM_PROMPT)
-                ),
+                SystemMessage(content=build_system_prompt_with_memory(_CORE_SYSTEM_PROMPT)),
             ]
             manager.persist(msgs)
             _chat_sessions[chat_id] = (msgs, manager)
@@ -121,26 +107,13 @@ def _send_text_as_user(
     chat_id: str,
     text: str,
 ) -> None:
-    body = (
-        CreateMessageRequestBody.builder()
-        .receive_id(chat_id)
-        .msg_type("text")
-        .content(json.dumps({"text": text}, ensure_ascii=False))
-        .build()
-    )
-    req = (
-        CreateMessageRequest.builder()
-        .receive_id_type("chat_id")
-        .request_body(body)
-        .build()
-    )
+    body = CreateMessageRequestBody.builder().receive_id(chat_id).msg_type("text").content(json.dumps({"text": text}, ensure_ascii=False)).build()
+    req = CreateMessageRequest.builder().receive_id_type("chat_id").request_body(body).build()
     opt = RequestOption()
     opt.user_access_token = user_access_token
     resp = client.im.v1.message.create(req, opt)
     if resp.code != 0:
-        logger.error(
-            "发送消息失败 code=%s msg=%s", resp.code, getattr(resp, "msg", resp)
-        )
+        logger.error("发送消息失败 code=%s msg=%s", resp.code, getattr(resp, "msg", resp))
 
 
 def _process_incoming(
@@ -275,23 +248,14 @@ def run_feishu_long_connection() -> None:
     app_secret = get_str("feishu.app_secret").strip()
     verification_token = get_str("feishu.verification_token").strip()
     if not app_id or not app_secret or not verification_token:
-        msg = (
-            "缺少 feishu.app_id / feishu.app_secret / "
-            "feishu.verification_token（settings.json）"
-        )
+        msg = "缺少 feishu.app_id / feishu.app_secret / feishu.verification_token（settings.json）"
         raise RuntimeError(msg)
     user_access_token = get_str("feishu.user_access_token").strip()
     encrypt_key = get_str("feishu.encrypt_key").strip()
     self_open_id = get_str("feishu.user_open_id").strip() or None
 
     graph = build_graph()
-    client = (
-        Client.builder()
-        .app_id(app_id)
-        .app_secret(app_secret)
-        .enable_set_token(True)
-        .build()
-    )
+    client = Client.builder().app_id(app_id).app_secret(app_secret).enable_set_token(True).build()
 
     dispatcher = build_event_dispatcher(
         encrypt_key=encrypt_key,

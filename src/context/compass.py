@@ -27,20 +27,14 @@ def _serialize_for_summary(msgs: list[BaseMessage]) -> str:
             content = str(content)
         lines.append(f"[{role}] {content}")
         if isinstance(m, AIMessage) and m.tool_calls:
-            lines.append(
-                f"  tool_calls: {json.dumps(m.tool_calls, ensure_ascii=False)}"
-            )
+            lines.append(f"  tool_calls: {json.dumps(m.tool_calls, ensure_ascii=False)}")
     return "\n".join(lines)
 
 
-def _summarize_slice(
-    slice_msgs: list[BaseMessage], *, llm: LLMRuntimeSettings | None = None
-) -> str:
+def _summarize_slice(slice_msgs: list[BaseMessage], *, llm: LLMRuntimeSettings | None = None) -> str:
     model = create_chat_model(llm=llm)
     text = _serialize_for_summary(slice_msgs)
-    user_content = load_template_prompt("compass/summary_user.txt").replace(
-        "{excerpt}", text
-    )
+    user_content = load_template_prompt("compass/summary_user.txt").replace("{excerpt}", text)
     reply = model.invoke(
         [
             SystemMessage(content=_COMPASS_SUMMARY_SYSTEM),

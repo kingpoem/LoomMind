@@ -109,9 +109,7 @@ def _summarize_tool_observation(messages: list[ToolMessage]) -> str:
     return " | ".join(lines)
 
 
-def _append_trace(
-    trace: list[PlanningTrace], *, node: str, content: str
-) -> list[PlanningTrace]:
+def _append_trace(trace: list[PlanningTrace], *, node: str, content: str) -> list[PlanningTrace]:
     lim = get_int("planning.trace_limit", 16)
     updated = [*trace, {"node": node, "content": _clip(content, limit=260)}]
     return updated[-lim:]
@@ -131,31 +129,15 @@ def _memory_hint(
     outline_block = ""
     if task_outline:
         ol = "\n".join(f"- {item}" for item in task_outline)
-        outline_block = (
-            "\n\n"
-            + load_template_prompt("planning/task_outline_block.txt").replace(
-                "{outline}", ol
-            )
-            + "\n"
-        )
+        outline_block = "\n\n" + load_template_prompt("planning/task_outline_block.txt").replace("{outline}", ol) + "\n"
 
     base = load_template_prompt("planning/thought_context.txt") + "\n"
 
     nearing = ""
     if limit > 1 and cycle >= max(0, limit - 2):
-        nearing = "\n" + load_template_prompt("planning/nearing_limit.txt").format(
-            cycle=cycle, limit=limit
-        )
+        nearing = "\n" + load_template_prompt("planning/nearing_limit.txt").format(cycle=cycle, limit=limit)
 
-    return (
-        f"{base}"
-        f"{nearing}"
-        f"{outline_block}"
-        "短期记忆（本轮）:\n"
-        f"{short}\n\n"
-        "长期记忆（跨轮）:\n"
-        f"{long}"
-    )
+    return f"{base}{nearing}{outline_block}短期记忆（本轮）:\n{short}\n\n长期记忆（跨轮）:\n{long}"
 
 
 def _build_long_term_entry(state: PlanningState) -> str:
@@ -175,10 +157,7 @@ def _build_long_term_entry(state: PlanningState) -> str:
     outline_s = ""
     if outline:
         outline_s = "；子目标=" + _clip(" | ".join(outline), limit=200)
-    return (
-        f"目标={goal or '未提取'}{outline_s}；"
-        f"观察={observation}；结果={answer or '未提取'}"
-    )
+    return f"目标={goal or '未提取'}{outline_s}；观察={observation}；结果={answer or '未提取'}"
 
 
 def build_planning_graph(
@@ -201,10 +180,7 @@ def build_planning_graph(
         limit = int(state.get("max_cycles", graph_max_cycles))
         outline = list(state.get("task_outline", []))
         planner_system = SystemMessage(
-            content=_memory_hint(
-                short_mem, long_mem, cycle=cycle, limit=limit, task_outline=outline
-            )
-            + f"\n\n当前循环次数: {cycle}/{limit}。"
+            content=_memory_hint(short_mem, long_mem, cycle=cycle, limit=limit, task_outline=outline) + f"\n\n当前循环次数: {cycle}/{limit}。"
         )
         reply: AIMessage = thought_model.invoke([*state["messages"], planner_system])
         if cycle == 0 and not outline:
@@ -265,11 +241,7 @@ def build_planning_graph(
         short_mem_s = "\n".join(short_mem) or "无"
         long_mem_s = "\n".join(long_mem) or "无"
         fin = load_template_prompt("planning/finalize.txt")
-        fin = (
-            fin.replace("{outline_txt}", outline_txt)
-            .replace("{short_mem}", short_mem_s)
-            .replace("{long_mem}", long_mem_s)
-        )
+        fin = fin.replace("{outline_txt}", outline_txt).replace("{short_mem}", short_mem_s).replace("{long_mem}", long_mem_s)
         finalize_prompt = SystemMessage(content=fin)
         reply: AIMessage = base_model.invoke([*state["messages"], finalize_prompt])
         trace = _append_trace(

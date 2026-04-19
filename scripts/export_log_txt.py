@@ -33,9 +33,7 @@ def lines_from_stored_messages(messages: list[dict[str, Any]]) -> list[str]:
     return lines
 
 
-def sync_raw_json_to_content_txt(
-    raw_json_path: Path, *, log_root: Path | None = None
-) -> Path:
+def sync_raw_json_to_content_txt(raw_json_path: Path, *, log_root: Path | None = None) -> Path:
     path = raw_json_path.resolve()
     root = log_root if log_root is not None else path.parent.parent
     out_dir = root / "content"

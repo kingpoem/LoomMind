@@ -233,35 +233,23 @@ def _emit_mcps(session: _Session) -> None:
     )
 
 
-_PERSISTABLE_ENV_KEYS = frozenset(
-    {"OPENROUTER_API_KEY", "OLLAMA_BASE_URL", "OLLAMA_API_KEY"}
-)
+_PERSISTABLE_ENV_KEYS = frozenset({"OPENROUTER_API_KEY", "OLLAMA_BASE_URL", "OLLAMA_API_KEY"})
 
 
 def _emit_llm_config(session: _Session) -> None:
     s = session.llm
     p = s.effective_provider()
-    ork = (
-        s.openrouter_api_key.strip()
-        if s.openrouter_api_key and str(s.openrouter_api_key).strip()
-        else get_str("llm.openrouter.api_key").strip()
-    )
+    ork = s.openrouter_api_key.strip() if s.openrouter_api_key and str(s.openrouter_api_key).strip() else get_str("llm.openrouter.api_key").strip()
     base = normalized_openai_api_base(base_url_override=s.ollama_base_url)
     emit(
         {
             "type": "llm_config",
             "provider": p.value,
             "openrouter_key_set": bool(ork),
-            "openrouter_from_session": bool(
-                s.openrouter_api_key and str(s.openrouter_api_key).strip()
-            ),
+            "openrouter_from_session": bool(s.openrouter_api_key and str(s.openrouter_api_key).strip()),
             "ollama_base": base,
-            "ollama_base_from_session": bool(
-                s.ollama_base_url and str(s.ollama_base_url).strip()
-            ),
-            "ollama_key_from_session": bool(
-                s.ollama_api_key and str(s.ollama_api_key).strip()
-            ),
+            "ollama_base_from_session": bool(s.ollama_base_url and str(s.ollama_base_url).strip()),
+            "ollama_key_from_session": bool(s.ollama_api_key and str(s.ollama_api_key).strip()),
             "provider_from_session": s.provider is not None,
             "model": session.model_name,
         }
@@ -506,9 +494,7 @@ def run_cli_stdio() -> None:
                 ):
                     if mode == "messages":
                         chunk, _ = data
-                        if isinstance(chunk, AIMessageChunk) and isinstance(
-                            chunk.content, str
-                        ):
+                        if isinstance(chunk, AIMessageChunk) and isinstance(chunk.content, str):
                             if chunk.content:
                                 emit({"type": "assistant_delta", "text": chunk.content})
                                 parts.append(chunk.content)
@@ -520,9 +506,7 @@ def run_cli_stdio() -> None:
                     messages = list(final_state["messages"])
                     if not assistant_text and messages:
                         last = messages[-1]
-                        if isinstance(last, AIMessage) and isinstance(
-                            last.content, str
-                        ):
+                        if isinstance(last, AIMessage) and isinstance(last.content, str):
                             assistant_text = last.content
                             if assistant_text:
                                 emit(

@@ -19,9 +19,7 @@ def read_long_term_memories(*, limit: int = 6) -> list[str]:
     raw = planning_memory_path().read_text(encoding="utf-8").strip()
     if not raw:
         return []
-    lines = [
-        line.strip("- ").strip() for line in raw.splitlines() if line.startswith("- ")
-    ]
+    lines = [line.strip("- ").strip() for line in raw.splitlines() if line.startswith("- ")]
     if limit <= 0:
         return []
     return lines[-limit:]

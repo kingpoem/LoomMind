@@ -25,6 +25,7 @@
 
 ### Tool use（工具使用）
 
+- 构建 LangGraph 时从加载器取出 tool 列表，通过 bind_tools 一次性绑定到 LLM 上
 工具层分两类接入，共享同一套 `ToolNode` 执行语义。MCP 侧用进程内 `FastMCP` 扫描 `src/tools/list/` 下各模块的 `register(mcp)`，实现与注册约定集中在一处，新增工具主要加文件而非改中心路由。`loader` 把 MCP 工具描述与入参模式映射成 LangChain `StructuredTool`，调用时转到 `builtin_server.call_tool`；`register` 若返回可迭代的工具名集合，则这些工具在运行前必须经过 `set_confirmation_callback`，在终端、stdio 与飞书场景下用不同策略处理「是否允许执行」，把高风险操作从纯模型决策里剥离出来。Skills 侧用 `skills_config.json` 描述暴露给模型的名字与说明，用 `business_funcs.py` 承载实现，加载器校验 handler 与函数表一致，让改提示的人不必碰 Python 细节。`graph_agent.build_graph` 把 MCP 与 Skills 合成一张工具表交给 `bind_tools`，由模型在 `thought` 里自主选择调用哪一个，没有硬编码的工具优先级或管线顺序。
 
 ### SubAgent（子代理）

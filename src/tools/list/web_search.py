@@ -15,10 +15,7 @@ from mcp.server.fastmcp import FastMCP
 
 from trust import TrustCategory
 
-_USER_AGENT = (
-    "Mozilla/5.0 (compatible; LoomMind/1.0; +https://github.com/) "
-    "AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
-)
+_USER_AGENT = "Mozilla/5.0 (compatible; LoomMind/1.0; +https://github.com/) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
 _FETCH_TIMEOUT_SEC = 25
 _SEARCH_TIMEOUT_SEC = 25
 _MAX_FETCH_BYTES = 512 * 1024
@@ -48,13 +45,7 @@ def _ip_blocked(ip: str) -> bool:
         addr = ipaddress.ip_address(ip)
     except ValueError:
         return True
-    return bool(
-        addr.is_private
-        or addr.is_loopback
-        or addr.is_link_local
-        or addr.is_multicast
-        or addr.is_reserved
-    )
+    return bool(addr.is_private or addr.is_loopback or addr.is_link_local or addr.is_multicast or addr.is_reserved)
 
 
 def _validate_public_http_url(url: str) -> tuple[str | None, str | None]:
@@ -98,9 +89,7 @@ def _http_request(
     hdrs = {"User-Agent": _USER_AGENT}
     if headers:
         hdrs.update(headers)
-    req = urllib.request.Request(
-        url, data=data, headers=hdrs, method="POST" if data else "GET"
-    )
+    req = urllib.request.Request(url, data=data, headers=hdrs, method="POST" if data else "GET")
     ctx = ssl.create_default_context()
     with urllib.request.urlopen(req, timeout=timeout, context=ctx) as resp:  # noqa: S310
         status = getattr(resp, "status", 200) or 200
@@ -159,17 +148,12 @@ def _duckduckgo_resolve_href(href: str) -> str | None:
     if h.startswith("//"):
         h = "https:" + h
     parsed = urllib.parse.urlparse(h)
-    if "duckduckgo.com" in (parsed.netloc or "").lower() and parsed.path.startswith(
-        "/l/"
-    ):
+    if "duckduckgo.com" in (parsed.netloc or "").lower() and parsed.path.startswith("/l/"):
         qs = urllib.parse.parse_qs(parsed.query)
         uddg = qs.get("uddg", [None])[0]
         if uddg:
             return urllib.parse.unquote(uddg)
-    if (
-        parsed.scheme in ("http", "https")
-        and "duckduckgo.com" not in (parsed.netloc or "").lower()
-    ):
+    if parsed.scheme in ("http", "https") and "duckduckgo.com" not in (parsed.netloc or "").lower():
         return urllib.parse.urlunparse(parsed)
     return None
 
@@ -350,9 +334,7 @@ def register(mcp: FastMCP) -> dict[str, TrustCategory]:
         else:
             text = text.strip()
 
-        header = (
-            f"URL: {norm}\nContent-Type: {ctype or '(unknown)'}\nHTTP: {status}\n\n"
-        )
+        header = f"URL: {norm}\nContent-Type: {ctype or '(unknown)'}\nHTTP: {status}\n\n"
         return _truncate(header + text, max_chars=cap)
 
     return {

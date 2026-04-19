@@ -18,9 +18,7 @@ def list_available_mcps() -> list[str]:
     return [str(getattr(t, "name", "")) for t in load_tools()]
 
 
-def _filter_tools(
-    tools: list[BaseTool], allowed: Iterable[str] | None
-) -> list[BaseTool]:
+def _filter_tools(tools: list[BaseTool], allowed: Iterable[str] | None) -> list[BaseTool]:
     if allowed is None:
         return list(tools)
     allow = set(allowed)

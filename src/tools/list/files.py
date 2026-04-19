@@ -204,9 +204,7 @@ def _parse_single_file_patch(
     return _ParsedUpdate(path=raw_path_update, hunks=hunks), None
 
 
-def _apply_replace_first(
-    content: str, old_string: str, new_string: str
-) -> tuple[str | None, str | None]:
+def _apply_replace_first(content: str, old_string: str, new_string: str) -> tuple[str | None, str | None]:
     """替换第一处；多处匹配则失败。"""
     if old_string == new_string:
         return content, None
@@ -221,9 +219,7 @@ def _apply_replace_first(
     return content.replace(old_string, new_string, 1), None
 
 
-def _apply_update_hunks(
-    content: str, hunks: list[tuple[list[str], list[str]]]
-) -> tuple[str | None, str | None]:
+def _apply_update_hunks(content: str, hunks: list[tuple[list[str], list[str]]]) -> tuple[str | None, str | None]:
     out = content
     for idx, (minus, plus) in enumerate(hunks):
         old_text = "\n".join(minus)
@@ -280,8 +276,7 @@ def _simulate_apply_file_patch(
                 None,
                 None,
                 None,
-                f"文件已存在：{resolved}"
-                "（Add 仅用于新建；覆盖请用 write_file 或 Update）",
+                f"文件已存在：{resolved}（Add 仅用于新建；覆盖请用 write_file 或 Update）",
             )
         return parsed, resolved, None, None
 
@@ -428,8 +423,7 @@ def _simulate_edit(
         return (
             None,
             count,
-            f"匹配到 {count} 处，请补充上下文使 old_string 唯一，"
-            "或传入 replace_all=True",
+            f"匹配到 {count} 处，请补充上下文使 old_string 唯一，或传入 replace_all=True",
         )
     if replace_all:
         new_content = content.replace(old_string, new_string)
@@ -494,11 +488,7 @@ def _preview_edit(args: dict) -> str | None:
         old_string = args.get("old_string")
         new_string = args.get("new_string")
         replace_all = bool(args.get("replace_all", False))
-        if (
-            not isinstance(path, str)
-            or not isinstance(old_string, str)
-            or not isinstance(new_string, str)
-        ):
+        if not isinstance(path, str) or not isinstance(old_string, str) or not isinstance(new_string, str):
             return None
 
         resolved, err = _resolve_in_workspace(path)
@@ -509,9 +499,7 @@ def _preview_edit(args: dict) -> str | None:
         if err is not None or content is None:
             return f"预览失败：{err}"
 
-        new_content, count, err = _simulate_edit(
-            content, old_string, new_string, replace_all
-        )
+        new_content, count, err = _simulate_edit(content, old_string, new_string, replace_all)
         if err is not None or new_content is None:
             return f"预览失败：{err}"
 
@@ -560,9 +548,7 @@ def _preview_write(args: dict) -> str | None:
             if old == content:
                 return f"内容未变化（{display}，{len(content)} 字节）"
             header = (
-                f"将覆盖（{display}，原 {len(old)} 字节 / "
-                f"{len(old.splitlines())} 行 → 新 {len(content)} 字节 / "
-                f"{len(content.splitlines())} 行）\n"
+                f"将覆盖（{display}，原 {len(old)} 字节 / {len(old.splitlines())} 行 → 新 {len(content)} 字节 / {len(content.splitlines())} 行）\n"
             )
             return header + _format_diff(old, content, display)
 
@@ -595,10 +581,7 @@ def _preview_create_file(args: dict) -> str | None:
             display = str(resolved)
 
         if resolved.exists():
-            return (
-                f"预览失败：路径已存在：{display}"
-                "（create_file 仅用于新建；覆盖请用 write_file）"
-            )
+            return f"预览失败：路径已存在：{display}（create_file 仅用于新建；覆盖请用 write_file）"
         return _format_new_file_preview(display, content)
     except Exception:
         logger.exception("create_file 预览生成失败")
@@ -684,11 +667,7 @@ def register(mcp: FastMCP) -> dict[str, TrustCategory | ToolSpec]:
         except OSError as err_stat:
             return f"read_file 失败：无法获取文件状态：{err_stat}"
         if size > _MAX_READ_BYTES:
-            return (
-                f"read_file 失败：文件过大（{size} 字节，上限 "
-                f"{_MAX_READ_BYTES} 字节）。请通过 run_bash 使用 "
-                "head/tail/sed 等命令分片读取。"
-            )
+            return f"read_file 失败：文件过大（{size} 字节，上限 {_MAX_READ_BYTES} 字节）。请通过 run_bash 使用 head/tail/sed 等命令分片读取。"
         try:
             return resolved.read_text(encoding="utf-8", errors="replace")
         except OSError as err_read:
@@ -723,9 +702,7 @@ def register(mcp: FastMCP) -> dict[str, TrustCategory | ToolSpec]:
         if err is not None or content is None:
             return f"edit_file 失败：{err}"
 
-        new_content, count, err = _simulate_edit(
-            content, old_string, new_string, replace_all
-        )
+        new_content, count, err = _simulate_edit(content, old_string, new_string, replace_all)
         if err is not None or new_content is None:
             return f"edit_file 失败：{err}"
 
@@ -800,10 +777,7 @@ def register(mcp: FastMCP) -> dict[str, TrustCategory | ToolSpec]:
             if resolved.is_dir():
                 return f"create_file 失败：路径是已存在的目录：{resolved}"
             if resolved.is_file():
-                return (
-                    f"create_file 失败：文件已存在：{resolved}"
-                    "（请改用 write_file 覆盖或先 delete_file）"
-                )
+                return f"create_file 失败：文件已存在：{resolved}（请改用 write_file 覆盖或先 delete_file）"
             return f"create_file 失败：路径已存在且不是可写文件：{resolved}"
 
         parent = resolved.parent
@@ -836,9 +810,7 @@ def register(mcp: FastMCP) -> dict[str, TrustCategory | ToolSpec]:
         if not resolved.exists():
             return f"delete_file 失败：文件不存在：{resolved}"
         if resolved.is_dir():
-            return (
-                f"delete_file 失败：路径是目录（目录请用 run_bash 等处理）：{resolved}"
-            )
+            return f"delete_file 失败：路径是目录（目录请用 run_bash 等处理）：{resolved}"
         if not resolved.is_file():
             return f"delete_file 失败：不是常规文件：{resolved}"
 
@@ -904,7 +876,5 @@ def register(mcp: FastMCP) -> dict[str, TrustCategory | ToolSpec]:
         "write_file": ToolSpec(TrustCategory.WRITE_FS, preview=_preview_write),
         "create_file": ToolSpec(TrustCategory.WRITE_FS, preview=_preview_create_file),
         "delete_file": ToolSpec(TrustCategory.WRITE_FS, preview=_preview_delete_file),
-        "apply_file_patch": ToolSpec(
-            TrustCategory.WRITE_FS, preview=_preview_apply_file_patch
-        ),
+        "apply_file_patch": ToolSpec(TrustCategory.WRITE_FS, preview=_preview_apply_file_patch),
     }

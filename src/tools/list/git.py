@@ -8,8 +8,6 @@ from mcp.server.fastmcp import FastMCP
 
 from trust import TrustCategory, workspace_root
 
-logger = logging.getLogger(__name__)
-
 _MAX_OUTPUT_BYTES = 256 * 1024
 _TIMEOUT_SEC = 120
 

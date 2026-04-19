@@ -28,9 +28,7 @@ def default_openrouter_model() -> str:
     return models[0] if models else "deepseek/deepseek-chat"
 
 
-def create_openrouter_chat_model(
-    model: str | None = None, *, api_key: str | None = None
-) -> ChatOpenAI:
+def create_openrouter_chat_model(model: str | None = None, *, api_key: str | None = None) -> ChatOpenAI:
     if api_key is not None and api_key.strip():
         key = api_key.strip()
     else:

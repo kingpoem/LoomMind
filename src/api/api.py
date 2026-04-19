@@ -15,9 +15,7 @@ from .provider import LLMProvider, resolve_llm_provider
 from .runtime_settings import LLMRuntimeSettings
 
 
-def create_chat_model(
-    model: str | None = None, *, llm: LLMRuntimeSettings | None = None
-) -> ChatOpenAI:
+def create_chat_model(model: str | None = None, *, llm: LLMRuntimeSettings | None = None) -> ChatOpenAI:
     provider = llm.effective_provider() if llm else resolve_llm_provider()
     if provider is LLMProvider.OLLAMA:
         return create_ollama_chat_model(

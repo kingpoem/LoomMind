@@ -29,10 +29,7 @@ def main() -> None:
         return
 
     if not args.stdio:
-        raise SystemExit(
-            "本地对话请使用 TUI：在项目根执行 "
-            "`cargo run --manifest-path tui/Cargo.toml`（或 `make run`）"
-        )
+        raise SystemExit("本地对话请使用 TUI：在项目根执行 `cargo run --manifest-path tui/Cargo.toml`（或 `make run`）")
 
     run_cli_stdio()
 

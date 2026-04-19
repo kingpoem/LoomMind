@@ -83,10 +83,7 @@ def validate_skills_config(raw: Any) -> None:
                 "且不以下划线开头。"
             )
         if not callable(fn):
-            raise TypeError(
-                f"skills_config.json[{idx}] handler={handler_key!r} "
-                f"指向对象不可调用：{type(fn)!r}"
-            )
+            raise TypeError(f"skills_config.json[{idx}] handler={handler_key!r} 指向对象不可调用：{type(fn)!r}")
 
 
 def load_all_skills(config_path: str | Path | None = None) -> list[StructuredTool]:

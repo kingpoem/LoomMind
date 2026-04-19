@@ -38,12 +38,8 @@ def _ollama_origin_for_tags(openai_api_base: str) -> str:
     return b
 
 
-def fetch_ollama_model_names(
-    *, base_url_override: str | None = None, timeout: float = 3.0
-) -> list[str]:
-    origin = _ollama_origin_for_tags(
-        normalized_openai_api_base(base_url_override=base_url_override)
-    )
+def fetch_ollama_model_names(*, base_url_override: str | None = None, timeout: float = 3.0) -> list[str]:
+    origin = _ollama_origin_for_tags(normalized_openai_api_base(base_url_override=base_url_override))
     url = f"{origin}/api/tags"
     req = urllib.request.Request(url, method="GET")
     try:
@@ -87,9 +83,7 @@ def create_ollama_chat_model(
     api_key: str | None = None,
     base_url_override: str | None = None,
 ) -> ChatOpenAI:
-    resolved = (
-        model or default_ollama_model(base_url_override=base_url_override)
-    ).strip()
+    resolved = (model or default_ollama_model(base_url_override=base_url_override)).strip()
     if api_key is not None and api_key.strip():
         use_key = api_key.strip()
     else:
