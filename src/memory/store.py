@@ -86,7 +86,7 @@ def _trim_summary_file(path: Path) -> None:
     head = raw[:2000]
     tail_len = _MAX_SUMMARY_FILE_CHARS - len(head) - 40
     tail = raw[-tail_len:] if tail_len > 0 else ""
-    path.write_text(head + "\n\n…（中间已省略过长历史）\n\n" + tail, encoding="utf-8")
+    path.write_text(head + "\n\n…（中间已省略过长历史）\n\n" + tail, encoding="utf-8", errors="replace")
 
 
 def record_compass_digest(summary: str) -> None:
@@ -100,5 +100,5 @@ def record_compass_digest(summary: str) -> None:
     path = memory_summary_path()
     stamp = datetime.now(UTC).strftime("%Y-%m-%d %H:%M UTC")
     block = f"\n\n---\n*{stamp} · compass*\n\n{text}\n"
-    path.write_text(path.read_text(encoding="utf-8").rstrip() + block, encoding="utf-8")
+    path.write_text(path.read_text(encoding="utf-8").rstrip() + block, encoding="utf-8", errors="replace")
     _trim_summary_file(path)

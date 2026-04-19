@@ -89,7 +89,6 @@ pub enum ChildEvent {
         openrouter_key_set: bool,
         openrouter_from_session: bool,
         ollama_base_from_session: bool,
-        ollama_key_from_session: bool,
         provider_from_session: bool,
     },
     LlmConfigSet(String),
@@ -334,10 +333,6 @@ fn parse_event(line: &str) -> Result<ChildEvent, String> {
                 .unwrap_or(false),
             ollama_base_from_session: value
                 .get("ollama_base_from_session")
-                .and_then(|v| v.as_bool())
-                .unwrap_or(false),
-            ollama_key_from_session: value
-                .get("ollama_key_from_session")
                 .and_then(|v| v.as_bool())
                 .unwrap_or(false),
             provider_from_session: value

@@ -18,6 +18,7 @@ from langgraph.prebuilt import ToolNode
 
 from api import create_chat_model
 from api.runtime_settings import LLMRuntimeSettings
+from llm_sanitize import sanitize_messages_for_llm
 from prompt_text import load_template_prompt
 from settings import get_int, get_optional_int
 
@@ -115,6 +116,30 @@ def _append_trace(trace: list[PlanningTrace], *, node: str, content: str) -> lis
     return updated[-lim:]
 
 
+def _merge_block_into_first_system(messages: list[BaseMessage], block: str, *, heading: str) -> list[BaseMessage]:
+    """把附加段落合并进第一条 SystemMessage。
+
+    Ollama 的 OpenAI 兼容层在「System → Human → System」顺序下常把助手解析成空 content；
+    规划轮次必须把上下文并入首条系统提示，而不是再追加一条 System。
+    """
+    suffix = f"\n\n{heading}{block}".rstrip()
+    out: list[BaseMessage] = []
+    merged = False
+    for m in messages:
+        if not merged and isinstance(m, SystemMessage):
+            merged = True
+            c = m.content
+            if isinstance(c, str):
+                out.append(SystemMessage(content=c + suffix))
+            else:
+                out.append(m)
+        else:
+            out.append(m)
+    if not merged:
+        out.insert(0, SystemMessage(content=suffix.strip()))
+    return out
+
+
 def _memory_hint(
     short_mem: list[str],
     long_mem: list[str],
@@ -179,10 +204,16 @@ def build_planning_graph(
         cycle = int(state.get("cycle_count", 0))
         limit = int(state.get("max_cycles", graph_max_cycles))
         outline = list(state.get("task_outline", []))
-        planner_system = SystemMessage(
-            content=_memory_hint(short_mem, long_mem, cycle=cycle, limit=limit, task_outline=outline) + f"\n\n当前循环次数: {cycle}/{limit}。"
+        planner_body = (
+            _memory_hint(short_mem, long_mem, cycle=cycle, limit=limit, task_outline=outline)
+            + f"\n\n当前循环次数: {cycle}/{limit}。"
         )
-        reply: AIMessage = thought_model.invoke([*state["messages"], planner_system])
+        to_invoke = _merge_block_into_first_system(
+            list(state["messages"]),
+            planner_body,
+            heading="## 规划上下文\n",
+        )
+        reply: AIMessage = thought_model.invoke(sanitize_messages_for_llm(to_invoke))
         if cycle == 0 and not outline:
             extracted = _extract_task_outline(_msg_text(reply))
             if extracted:
@@ -242,8 +273,8 @@ def build_planning_graph(
         long_mem_s = "\n".join(long_mem) or "无"
         fin = load_template_prompt("planning/finalize.txt")
         fin = fin.replace("{outline_txt}", outline_txt).replace("{short_mem}", short_mem_s).replace("{long_mem}", long_mem_s)
-        finalize_prompt = SystemMessage(content=fin)
-        reply: AIMessage = base_model.invoke([*state["messages"], finalize_prompt])
+        finalize_prompt = HumanMessage(content=fin)
+        reply: AIMessage = base_model.invoke(sanitize_messages_for_llm([*state["messages"], finalize_prompt]))
         trace = _append_trace(
             trace,
             node="thought",

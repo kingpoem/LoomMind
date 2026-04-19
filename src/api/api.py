@@ -1,6 +1,8 @@
 from langchain_core.messages import BaseMessage
 from langchain_openai import ChatOpenAI
 
+from llm_sanitize import sanitize_messages_for_llm
+
 from .ollama import (
     create_ollama_chat_model,
     default_ollama_model,
@@ -20,7 +22,6 @@ def create_chat_model(model: str | None = None, *, llm: LLMRuntimeSettings | Non
     if provider is LLMProvider.OLLAMA:
         return create_ollama_chat_model(
             model=model,
-            api_key=llm.ollama_api_key if llm else None,
             base_url_override=llm.ollama_base_url if llm else None,
         )
     return create_openrouter_chat_model(
@@ -53,4 +54,4 @@ def invoke(
     *,
     llm: LLMRuntimeSettings | None = None,
 ) -> BaseMessage:
-    return create_chat_model(model=model, llm=llm).invoke(messages)
+    return create_chat_model(model=model, llm=llm).invoke(sanitize_messages_for_llm(messages))

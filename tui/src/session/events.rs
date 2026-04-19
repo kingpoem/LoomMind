@@ -146,7 +146,6 @@ pub fn handle_child_event(term: &mut Term, app: &mut App, ev: ChildEvent) -> io:
             openrouter_key_set,
             openrouter_from_session,
             ollama_base_from_session,
-            ollama_key_from_session,
             provider_from_session,
         } => {
             app.llm_provider_label = provider.clone();
@@ -167,7 +166,7 @@ pub fn handle_child_event(term: &mut Term, app: &mut App, ev: ChildEvent) -> io:
             insert_system(
                 term,
                 &format!(
-                    "Ollama base: {ollama_base} | base 会话覆盖: {ollama_base_from_session} | ollama key 会话覆盖: {ollama_key_from_session} | provider 会话覆盖: {provider_from_session}"
+                    "Ollama base: {ollama_base} | base 会话覆盖: {ollama_base_from_session} | provider 会话覆盖: {provider_from_session}"
                 ),
             )?;
         }

@@ -1,4 +1,4 @@
-"""Ollama 本地模型（OpenAI 兼容 Chat API）。"""
+"""Ollama 本地模型"""
 
 # https://github.com/ollama/ollama/blob/main/docs/openai.md
 
@@ -80,16 +80,12 @@ def default_ollama_model(*, base_url_override: str | None = None) -> str:
 def create_ollama_chat_model(
     model: str | None = None,
     *,
-    api_key: str | None = None,
     base_url_override: str | None = None,
 ) -> ChatOpenAI:
     resolved = (model or default_ollama_model(base_url_override=base_url_override)).strip()
-    if api_key is not None and api_key.strip():
-        use_key = api_key.strip()
-    else:
-        persisted = get_str("llm.ollama.api_key").strip()
-        placeholder = get_str("llm.ollama.api_key_placeholder", "ollama").strip()
-        use_key = persisted or placeholder or "ollama"
+    # OpenAI 兼容客户端要求非空 key；本地 Ollama 不校验，占位即可
+    placeholder = get_str("llm.ollama.api_key_placeholder", "ollama").strip()
+    use_key = placeholder or "ollama"
     return ChatOpenAI(
         model=resolved,
         openai_api_key=use_key,

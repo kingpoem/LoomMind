@@ -21,20 +21,15 @@ def collect_post_model_config_items(session) -> list[dict]:
                 }
             )
     elif p is LLMProvider.OLLAMA:
-        if not _settings_nonempty("llm.ollama.base_url"):
+        # base_url 为空时回退到 llm.ollama.default_origin（template 默认本机 11434）
+        if not _settings_nonempty("llm.ollama.base_url") and not get_str(
+            "llm.ollama.default_origin"
+        ).strip():
             out.append(
                 {
                     "id": "OLLAMA_BASE_URL",
                     "label": "Ollama Base URL",
                     "hint": "例 http://127.0.0.1:11434（可带/不带 /v1）",
-                }
-            )
-        if not _settings_nonempty("llm.ollama.api_key"):
-            out.append(
-                {
-                    "id": "OLLAMA_API_KEY",
-                    "label": "Ollama API Key",
-                    "hint": "按需填写（本地可填 ollama）",
                 }
             )
     return out

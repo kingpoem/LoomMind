@@ -47,6 +47,7 @@ known-first-party = [
     "context",
     "graph_agent",
     "lark",
+    "llm_sanitize",
     "memory",
     "parser",
     "planning",

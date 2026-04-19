@@ -37,5 +37,7 @@ class ContentManager:
         """把当前消息列表写入 log/raw/<session_id>.json 并返回路径。"""
         self.raw_dir.mkdir(parents=True, exist_ok=True)
         path = self.raw_dir / f"{self.session_id}.json"
-        path.write_text(self.dumps_session(messages), encoding="utf-8")
+        # 与 stdio emit 一致：模型回复偶含非法标量（孤立 UTF-16 代理项），严格 UTF-8 写盘会抛错并
+        # 阻断 token_usage，导致 TUI 侧 assistant_buf 永不落屏。
+        path.write_text(self.dumps_session(messages), encoding="utf-8", errors="replace")
         return path

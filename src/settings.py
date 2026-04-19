@@ -13,7 +13,6 @@ _settings_cache: dict[str, Any] | None = None
 WIRE_LLM_KEYS_TO_JSON: dict[str, str] = {
     "OPENROUTER_API_KEY": "llm.openrouter.api_key",
     "OLLAMA_BASE_URL": "llm.ollama.base_url",
-    "OLLAMA_API_KEY": "llm.ollama.api_key",
 }
 
 

@@ -9,6 +9,7 @@ from langchain_core.messages import AIMessage, BaseMessage, HumanMessage, System
 
 from api import create_chat_model
 from api.runtime_settings import LLMRuntimeSettings
+from llm_sanitize import sanitize_messages_for_llm
 from prompt_text import load_template_prompt
 from settings import get_int
 
@@ -36,10 +37,12 @@ def _summarize_slice(slice_msgs: list[BaseMessage], *, llm: LLMRuntimeSettings |
     text = _serialize_for_summary(slice_msgs)
     user_content = load_template_prompt("compass/summary_user.txt").replace("{excerpt}", text)
     reply = model.invoke(
-        [
-            SystemMessage(content=_COMPASS_SUMMARY_SYSTEM),
-            HumanMessage(content=user_content),
-        ]
+        sanitize_messages_for_llm(
+            [
+                SystemMessage(content=_COMPASS_SUMMARY_SYSTEM),
+                HumanMessage(content=user_content),
+            ]
+        )
     )
     out = reply.content
     if isinstance(out, str):

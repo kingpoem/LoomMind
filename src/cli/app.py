@@ -42,6 +42,21 @@ from .stdio_trust import stdio_trust_prompt
 _CORE_SYSTEM_PROMPT = load_template_prompt("core/system.txt")
 
 
+def _text_from_ai_content(content: object) -> str:
+    """OpenAI 兼容接口下 content 可能为 str 或 list[{'type':'text','text':...}]（Ollama 等）。"""
+    if isinstance(content, str):
+        return content
+    if isinstance(content, list):
+        parts: list[str] = []
+        for block in content:
+            if isinstance(block, dict) and block.get("type") == "text":
+                parts.append(str(block.get("text", "")))
+            elif isinstance(block, str):
+                parts.append(block)
+        return "".join(parts)
+    return str(content) if content is not None else ""
+
+
 def _auto_compress_if_over_threshold(
     messages: list[BaseMessage],
     *,
@@ -118,8 +133,6 @@ class _Session:
             self.llm.openrouter_api_key = None
         elif key == "OLLAMA_BASE_URL":
             self.llm.ollama_base_url = None
-        elif key == "OLLAMA_API_KEY":
-            self.llm.ollama_api_key = None
 
     def apply_llm_config(self, raw: dict) -> None:
         if raw.get("clear") is True:
@@ -139,7 +152,6 @@ class _Session:
                         raise ValueError(p)
             for json_key, attr in (
                 ("openrouter_api_key", "openrouter_api_key"),
-                ("ollama_api_key", "ollama_api_key"),
                 ("ollama_base_url", "ollama_base_url"),
             ):
                 if json_key not in raw:
@@ -189,15 +201,10 @@ class _Session:
 
 
 def _emit_models(session: _Session) -> None:
-    # Ollama：TUI 侧先展示空列表（由用户配置 base 后再用 /model 拉取）
-    if session.llm.effective_provider() is LLMProvider.OLLAMA:
-        items: list[str] = []
-    else:
-        items = session.available_models
     emit(
         {
             "type": "models",
-            "items": items,
+            "items": session.available_models,
             "current": session.model_name,
         }
     )
@@ -233,7 +240,7 @@ def _emit_mcps(session: _Session) -> None:
     )
 
 
-_PERSISTABLE_ENV_KEYS = frozenset({"OPENROUTER_API_KEY", "OLLAMA_BASE_URL", "OLLAMA_API_KEY"})
+_PERSISTABLE_ENV_KEYS = frozenset({"OPENROUTER_API_KEY", "OLLAMA_BASE_URL"})
 
 
 def _emit_llm_config(session: _Session) -> None:
@@ -249,7 +256,6 @@ def _emit_llm_config(session: _Session) -> None:
             "openrouter_from_session": bool(s.openrouter_api_key and str(s.openrouter_api_key).strip()),
             "ollama_base": base,
             "ollama_base_from_session": bool(s.ollama_base_url and str(s.ollama_base_url).strip()),
-            "ollama_key_from_session": bool(s.ollama_api_key and str(s.ollama_api_key).strip()),
             "provider_from_session": s.provider is not None,
             "model": session.model_name,
         }
@@ -314,6 +320,10 @@ def run_cli_stdio() -> None:
                 continue
 
             if cmd_type == "list_models":
+                session.available_models = list_available_models(llm=session.llm)
+                if session.model_name not in session.available_models:
+                    session.model_name = default_model_name(llm=session.llm)
+                    session.graph = session._build()
                 _emit_models(session)
                 continue
             if cmd_type == "list_providers":
@@ -495,10 +505,11 @@ def run_cli_stdio() -> None:
                 ):
                     if mode == "messages":
                         chunk, _ = data
-                        if isinstance(chunk, AIMessageChunk) and isinstance(chunk.content, str):
-                            if chunk.content:
-                                emit({"type": "assistant_delta", "text": chunk.content})
-                                parts.append(chunk.content)
+                        if isinstance(chunk, AIMessageChunk):
+                            delta = _text_from_ai_content(chunk.content)
+                            if delta:
+                                emit({"type": "assistant_delta", "text": delta})
+                                parts.append(delta)
                     elif mode == "values":
                         final_state = data
 
@@ -507,8 +518,8 @@ def run_cli_stdio() -> None:
                     messages = list(final_state["messages"])
                     if not assistant_text and messages:
                         last = messages[-1]
-                        if isinstance(last, AIMessage) and isinstance(last.content, str):
-                            assistant_text = last.content
+                        if isinstance(last, AIMessage):
+                            assistant_text = _text_from_ai_content(last.content)
                             if assistant_text:
                                 emit(
                                     {
