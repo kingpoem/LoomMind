@@ -646,7 +646,7 @@ def register(mcp: FastMCP) -> dict[str, TrustCategory | ToolSpec]:
 
         参数 path：文件路径。可以是绝对路径，也可以是相对工作区根目录的相对路径。
         拒绝读取工作区之外的任何文件（符号链接按解析后的真实位置判定）。
-        读取上限为 256 KiB；更大的文件会被拒绝并提示使用 run_bash 中的
+        读取上限为 256 KiB；更大的文件会被拒绝并提示使用 run_cmd 中的
         head/tail/sed 等命令分片读取。返回文件原样文本内容。
 
         示例 path：
@@ -668,7 +668,7 @@ def register(mcp: FastMCP) -> dict[str, TrustCategory | ToolSpec]:
         except OSError as err_stat:
             return f"read_file 失败：无法获取文件状态：{err_stat}"
         if size > _MAX_READ_BYTES:
-            return f"read_file 失败：文件过大（{size} 字节，上限 {_MAX_READ_BYTES} 字节）。请通过 run_bash 使用 head/tail/sed 等命令分片读取。"
+            return f"read_file 失败：文件过大（{size} 字节，上限 {_MAX_READ_BYTES} 字节）。请通过 run_cmd 使用 head/tail/sed 等命令分片读取。"
         try:
             return resolved.read_text(encoding="utf-8", errors="replace")
         except OSError as err_read:
@@ -811,7 +811,7 @@ def register(mcp: FastMCP) -> dict[str, TrustCategory | ToolSpec]:
         if not resolved.exists():
             return f"delete_file 失败：文件不存在：{resolved}"
         if resolved.is_dir():
-            return f"delete_file 失败：路径是目录（目录请用 run_bash 等处理）：{resolved}"
+            return f"delete_file 失败：路径是目录（目录请用 run_cmd 等处理）：{resolved}"
         if not resolved.is_file():
             return f"delete_file 失败：不是常规文件：{resolved}"
 

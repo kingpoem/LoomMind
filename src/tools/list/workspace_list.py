@@ -83,7 +83,7 @@ def register(mcp: FastMCP) -> dict[str, TrustCategory]:
 
         tree_bin = shutil.which("tree")
         if tree_bin is None:
-            return "workspace_tree 失败：未找到 `tree` 可执行文件。macOS 可执行：`brew install tree`；或改用 run_bash / find 等命令。"
+            return "workspace_tree 失败：未找到 `tree` 可执行文件。macOS 可执行：`brew install tree`；或改用 run_cmd / find 等命令。"
 
         try:
             proc = subprocess.run(

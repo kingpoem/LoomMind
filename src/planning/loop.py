@@ -23,6 +23,7 @@ from prompt_text import load_template_prompt
 from settings import get_int, get_optional_int
 
 from .memory import append_long_term_memory, read_long_term_memories
+from .todo import get_context_block as _get_todo_block
 
 
 class PlanningTrace(TypedDict):
@@ -162,7 +163,10 @@ def _memory_hint(
     if limit > 1 and cycle >= max(0, limit - 2):
         nearing = "\n" + load_template_prompt("planning/nearing_limit.txt").format(cycle=cycle, limit=limit)
 
-    return f"{base}{nearing}{outline_block}短期记忆（本轮）:\n{short}\n\n长期记忆（跨轮）:\n{long}"
+    todo_block = _get_todo_block()
+    todo_section = ("\n\n" + todo_block) if todo_block else ""
+
+    return f"{base}{nearing}{outline_block}短期记忆（本轮）:\n{short}\n\n长期记忆（跨轮）:\n{long}{todo_section}"
 
 
 def _build_long_term_entry(state: PlanningState) -> str:
