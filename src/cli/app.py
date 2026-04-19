@@ -36,7 +36,7 @@ from user_input_parse import UserInputSymbolTable, build_user_input_symbol_table
 
 from .post_model_config import collect_post_model_config_items
 from .stdio_confirm import stdio_tool_confirm, stdio_tool_notify
-from .stdio_protocol import emit, read_command_line
+from .stdio_protocol import emit, install_pipe_safe_stdout, read_command_line
 from .stdio_trust import stdio_trust_prompt
 
 _CORE_SYSTEM_PROMPT = load_template_prompt("core/system.txt")
@@ -257,6 +257,7 @@ def _emit_llm_config(session: _Session) -> None:
 
 
 def run_cli_stdio() -> None:
+    install_pipe_safe_stdout()
     set_confirmation_callback(stdio_tool_confirm)
     set_notification_callback(stdio_tool_notify)
     trust.ensure_trust_at_startup(stdio_trust_prompt)

@@ -136,16 +136,21 @@ pub fn read_model_label(_root: &PathBuf) -> String {
     "loommind".to_string()
 }
 
+fn child_stderr_log_path() -> PathBuf {
+    std::env::temp_dir().join("loommind-tui-child.log")
+}
+
 pub fn spawn_child(root: &PathBuf) -> io::Result<(Child, ChildStdin, Receiver<ChildEvent>)> {
-    let log_path = std::env::temp_dir().join("loommind-tui-child.log");
+    let log_path = child_stderr_log_path();
     let log_file = std::fs::OpenOptions::new()
         .create(true)
         .append(true)
         .open(&log_path)?;
 
     let mut child = Command::new("uv")
-        .args(["run", "python", "src/main.py", "--cli", "--stdio"])
+        .args(["run", "python", "-u", "src/main.py", "--cli", "--stdio"])
         .current_dir(root)
+        .env("PYTHONUNBUFFERED", "1")
         .stdin(Stdio::piped())
         .stdout(Stdio::piped())
         .stderr(Stdio::from(log_file))
