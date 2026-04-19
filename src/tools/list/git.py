@@ -27,7 +27,7 @@ def register(mcp: FastMCP) -> dict[str, TrustCategory]:
     def git(args: str) -> str:
         """在工作区根目录（当前进程 cwd 对应的工作区）执行 `git` 子命令，返回 stdout、stderr 与退出码。
 
-        与 `run_bash` 的区别：只调用 `git` 可执行文件，参数经 `shlex.split` 解析，不使用 shell，
+        与 `run_cmd` 的区别：只调用 `git` 可执行文件，参数经 `shlex.split` 解析，不使用 shell，
         可避免注入；工作目录固定为工作区根，适合查看状态、提交、分支、远端同步等常规 Git 操作。
 
         参数 args：`git` 后面的子命令与参数（纯文本）。示例：
@@ -47,7 +47,7 @@ def register(mcp: FastMCP) -> dict[str, TrustCategory]:
         - 历史与查询：`log` / `show` / `blame` / `grep` / `reflog` / `tag`。
         - 工作流：团队可采用 Git Flow（如 git-flow 插件）或约定式提交（Conventional Commits）规范提交说明。
 
-        若需在工作区根之外的路径执行 Git、或必须使用管道与 shell 特性，请改用 `run_bash`。
+        若需在工作区根之外的路径执行 Git、或必须使用管道与 shell 特性，请改用 `run_cmd`。
 
         stderr 与非零退出码不会导致工具调用失败，会原样返回以便判断是否成功。
         """
