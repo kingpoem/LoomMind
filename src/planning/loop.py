@@ -21,6 +21,7 @@ from api.runtime_settings import LLMRuntimeSettings
 from prompt_text import load_template_prompt
 from settings import get_int, get_optional_int
 
+from .exit_signal import take_exit
 from .memory import append_long_term_memory, read_long_term_memories
 from .todo import get_context_block as _get_todo_block
 
@@ -210,6 +211,18 @@ def build_planning_graph(
     def observation(state: PlanningState) -> dict:
         short_mem = list(state.get("short_term_memory", []))
         trace = list(state.get("planning_trace", []))
+
+        exit_signal = take_exit()
+        if exit_signal is not None:
+            tool_name, message = exit_signal
+            trace = _append_trace(trace, node="observation", content=f"{tool_name}: {_clip(message)}")
+            return {
+                "messages": [AIMessage(content=message)],
+                "short_term_memory": short_mem,
+                "planning_trace": trace,
+                "exit_reason": tool_name,
+            }
+
         observed = _summarize_tool_observation(_latest_tool_messages(state["messages"]))
         if not observed:
             return {"short_term_memory": short_mem, "planning_trace": trace}
@@ -228,7 +241,9 @@ def build_planning_graph(
         limit = int(state.get("max_cycles", graph_max_cycles))
         trace = list(state.get("planning_trace", []))
         reason = state.get("exit_reason", "")
-        if cycle >= limit:
+        if reason in _TOOL_EXIT_REASONS:
+            detail = f"工具退出: {reason}"
+        elif cycle >= limit:
             reason = "max_cycles_reached"
             detail = "达到退出条件：循环上限"
         else:
@@ -270,8 +285,13 @@ def build_planning_graph(
             return "action"
         return "remember"
 
+    _TOOL_EXIT_REASONS = frozenset({"ask_user", "finish_task"})
+
     def route_after_next_step(state: PlanningState) -> str:
-        if state.get("exit_reason") == "max_cycles_reached":
+        reason = state.get("exit_reason", "")
+        if reason in _TOOL_EXIT_REASONS:
+            return "remember"
+        if reason == "max_cycles_reached":
             return "finalize"
         return "thought"
 
@@ -296,7 +316,7 @@ def build_planning_graph(
         g.add_conditional_edges(
             "next_step",
             route_after_next_step,
-            {"finalize": "finalize", "thought": "thought"},
+            {"finalize": "finalize", "thought": "thought", "remember": "remember"},
         )
         g.add_edge("finalize", "remember")
     else:
