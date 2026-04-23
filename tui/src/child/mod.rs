@@ -108,6 +108,10 @@ pub enum ChildEvent {
     TrustRequest {
         workspace: String,
     },
+    SubagentPermissionRequest {
+        id: String,
+        categories: Vec<String>,
+    },
 }
 
 pub fn locate_project_root() -> io::Result<PathBuf> {
@@ -318,6 +322,10 @@ fn parse_event(line: &str) -> Result<ChildEvent, String> {
         }
         "trust_request" => ChildEvent::TrustRequest {
             workspace: s("workspace"),
+        },
+        "subagent_permission_request" => ChildEvent::SubagentPermissionRequest {
+            id: s("id"),
+            categories: str_array("categories"),
         },
         "llm_config" => ChildEvent::LlmConfig {
             provider: s("provider"),

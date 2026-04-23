@@ -2,7 +2,9 @@ use std::time::Instant;
 
 use crate::child::ModelConfigItem;
 use crate::theme::constants;
-use crate::view::popup::{Selector, SlashPopup, TextPrompt, ToolApproval, TrustApproval};
+use crate::view::popup::{
+    Selector, SlashPopup, SubagentPermissionSelector, TextPrompt, ToolApproval, TrustApproval,
+};
 
 #[derive(Debug, PartialEq, Eq)]
 pub enum SessionState {
@@ -18,6 +20,7 @@ pub enum Overlay {
     TextPrompt(TextPrompt),
     Approval(ToolApproval),
     Trust(TrustApproval),
+    SubagentPermission(SubagentPermissionSelector),
 }
 
 impl Overlay {

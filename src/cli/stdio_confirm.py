@@ -8,6 +8,13 @@ from trust import TrustCategory
 
 from .stdio_protocol import emit, read_command_line
 
+_CATEGORY_ID_MAP: dict[str, TrustCategory] = {
+    "read_fs": TrustCategory.READ_FS,
+    "write_fs": TrustCategory.WRITE_FS,
+    "exec": TrustCategory.EXEC,
+    "network": TrustCategory.NETWORK,
+}
+
 _CATEGORY_HINTS: dict[TrustCategory, str] = {
     TrustCategory.READ_FS: "读取本地文件",
     TrustCategory.WRITE_FS: "写入本地文件",
@@ -76,3 +83,30 @@ def stdio_tool_notify(tool_name: str, args: dict) -> None:
             "args": _safe_args(args),
         }
     )
+
+
+def stdio_request_subagent_permissions() -> frozenset[TrustCategory] | None:
+    """向 TUI 发送子 Agent 权限请求，阻塞等待用户在多选框中选定类别后返回。"""
+    req_id = uuid.uuid4().hex
+    categories = [cat.name.lower() for cat in TrustCategory]
+    emit(
+        {
+            "type": "subagent_permission_request",
+            "id": req_id,
+            "categories": categories,
+        }
+    )
+    while True:
+        raw = read_command_line()
+        if raw is None:
+            return None
+        if not raw:
+            continue
+        cmd = raw.get("type")
+        if cmd == "subagent_permission_response" and raw.get("id") == req_id:
+            allowed_strs: list = raw.get("allowed") or []
+            return frozenset(
+                _CATEGORY_ID_MAP[s] for s in allowed_strs if s in _CATEGORY_ID_MAP
+            )
+        if cmd == "shutdown":
+            return None

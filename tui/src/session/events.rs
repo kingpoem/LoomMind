@@ -12,7 +12,8 @@ use crate::term::Term;
 use crate::util::{normalize_inline_text, truncate_to_width};
 use crate::view::history::{insert_assistant, insert_error, insert_system, insert_user};
 use crate::view::popup::{
-    Selector, SelectorKind, SlashPopup, TextPrompt, ToolApproval, TrustApproval,
+    Selector, SelectorKind, SlashPopup, SubagentPermissionSelector, TextPrompt, ToolApproval,
+    TrustApproval,
 };
 
 pub fn handle_child_event(term: &mut Term, app: &mut App, ev: ChildEvent) -> io::Result<()> {
@@ -229,6 +230,16 @@ pub fn handle_child_event(term: &mut Term, app: &mut App, ev: ChildEvent) -> io:
             app.status = "等待工作区信任决定…".into();
             insert_system(term, &format!("请选择是否信任工作区：{workspace}"))?;
         }
+        ChildEvent::SubagentPermissionRequest { id, categories } => {
+            if !app.assistant_buf.is_empty() {
+                let buf = std::mem::take(&mut app.assistant_buf);
+                insert_assistant(term, &buf)?;
+            }
+            app.overlay =
+                Overlay::SubagentPermission(SubagentPermissionSelector::new(id, categories));
+            app.status = "请选择子 Agent 权限…".into();
+            insert_system(term, "子 Agent 请求工具访问权限，请选择允许的类别。")?;
+        }
     }
     Ok(())
 }
@@ -341,6 +352,9 @@ fn handle_overlay_key(
         Overlay::Selector(_) => handle_selector_key(term, app, child_stdin, key),
         Overlay::Approval(_) => handle_approval_key(term, app, child_stdin, key),
         Overlay::Trust(_) => handle_trust_key(term, app, child_stdin, key),
+        Overlay::SubagentPermission(_) => {
+            handle_subagent_permission_key(term, app, child_stdin, key)
+        }
         Overlay::None => Ok(()),
         Overlay::TextPrompt(_) => Ok(()),
     }
@@ -550,6 +564,7 @@ fn handle_selector_key(
                     Some(json!({"type": "set_mcps", "names": names}))
                 }
                 SelectorKind::ModelConfig => None,
+                SelectorKind::SubagentPermission => None,
             };
             app.overlay = Overlay::None;
             if let Some(p) = payload {
@@ -686,6 +701,82 @@ fn submit_tool_approval(
     } else {
         app.status = "已拒绝，等待模型继续…".into();
         insert_system(term, &format!("已拒绝工具 {tool} 执行。"))?;
+    }
+    Ok(())
+}
+
+fn handle_subagent_permission_key(
+    term: &mut Term,
+    app: &mut App,
+    child_stdin: &mut ChildStdin,
+    key: KeyEvent,
+) -> io::Result<()> {
+    match (key.code, key.modifiers) {
+        (KeyCode::Esc, _) | (KeyCode::Char('c'), KeyModifiers::CONTROL) => {
+            submit_subagent_permission(term, app, child_stdin, vec![])?;
+        }
+        (KeyCode::Up, _) => {
+            if let Overlay::SubagentPermission(subperm) = &mut app.overlay {
+                subperm.selector.move_up();
+            }
+        }
+        (KeyCode::Char('k'), m) if !m.contains(KeyModifiers::CONTROL) => {
+            if let Overlay::SubagentPermission(subperm) = &mut app.overlay {
+                subperm.selector.move_up();
+            }
+        }
+        (KeyCode::Down, _) => {
+            if let Overlay::SubagentPermission(subperm) = &mut app.overlay {
+                subperm.selector.move_down();
+            }
+        }
+        (KeyCode::Char('j'), m) if !m.contains(KeyModifiers::CONTROL) => {
+            if let Overlay::SubagentPermission(subperm) = &mut app.overlay {
+                subperm.selector.move_down();
+            }
+        }
+        (KeyCode::Char(' '), _) => {
+            if let Overlay::SubagentPermission(subperm) = &mut app.overlay {
+                subperm.selector.toggle();
+            }
+        }
+        (KeyCode::Enter, _) => {
+            let allowed = if let Overlay::SubagentPermission(subperm) = &app.overlay {
+                subperm.selector.collect_selected_ids()
+            } else {
+                vec![]
+            };
+            submit_subagent_permission(term, app, child_stdin, allowed)?;
+        }
+        _ => {}
+    }
+    Ok(())
+}
+
+fn submit_subagent_permission(
+    term: &mut Term,
+    app: &mut App,
+    child_stdin: &mut ChildStdin,
+    allowed: Vec<String>,
+) -> io::Result<()> {
+    let Overlay::SubagentPermission(subperm) = &app.overlay else {
+        return Ok(());
+    };
+    let req_id = subperm.id.clone();
+    app.overlay = Overlay::None;
+    let _ = send_command(
+        child_stdin,
+        json!({"type": "subagent_permission_response", "id": req_id, "allowed": allowed}),
+    );
+    if allowed.is_empty() {
+        app.status = "子 Agent 已拒绝，继续执行…".into();
+        insert_system(term, "子 Agent 权限已拒绝，工具调用将被阻止。")?;
+    } else {
+        app.status = "子 Agent 已授权，执行中…".into();
+        insert_system(
+            term,
+            &format!("子 Agent 已授予权限：{}", allowed.join(", ")),
+        )?;
     }
     Ok(())
 }

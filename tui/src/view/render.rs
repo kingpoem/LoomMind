@@ -36,6 +36,9 @@ pub fn draw_inline(frame: &mut Frame, app: &App) {
         }
         Overlay::Approval(req) => render_tool_approval(frame, chunks[1], req),
         Overlay::Trust(req) => render_trust_approval(frame, chunks[1], req),
+        Overlay::SubagentPermission(subperm) => {
+            render_selector(frame, chunks[1], &subperm.selector)
+        }
         Overlay::None if SlashPopup::is_active(&app.input) => {
             render_slash_popup(frame, chunks[1], &app.input, &app.popup);
         }
