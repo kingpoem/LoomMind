@@ -6,6 +6,11 @@ from langchain_core.messages import AIMessage, HumanMessage, SystemMessage
 from mcp.server.fastmcp import FastMCP
 
 from planning.loop import build_planning_graph
+from tools.subagent_context import (
+    get_allowed_categories,
+    get_permission_callback,
+    set_allowed_categories,
+)
 from trust import TrustCategory
 
 # 子 Agent 不开放的工具——防递归、防全局状态污染
@@ -57,7 +62,19 @@ def register(mcp: FastMCP) -> dict[str, TrustCategory]:
 
         graph = build_planning_graph(tools=sub_tools, max_cycles=cycles)
 
+        # 获取子 Agent 的工具类别权限
+        cb = get_permission_callback()
+        if cb is not None:
+            # stdio/TUI 模式：向用户弹出权限选择框
+            allowed: frozenset[TrustCategory] | None = cb()
+            if allowed is None:
+                return "子 Agent 启动已取消（用户未授权权限）"
+        else:
+            # tty 模式：不预授权，各工具仍会单独弹出确认
+            allowed = None
+
         _thread_local.depth = current + 1
+        set_allowed_categories(allowed)
         try:
             result = graph.invoke({
                 "messages": [
@@ -66,6 +83,7 @@ def register(mcp: FastMCP) -> dict[str, TrustCategory]:
                 ]
             })
         finally:
+            set_allowed_categories(None)
             _thread_local.depth = current
 
         for msg in reversed(result.get("messages", [])):

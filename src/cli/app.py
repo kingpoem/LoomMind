@@ -33,10 +33,11 @@ from prompt_text import load_template_prompt
 from settings import get_str, merge_llm_provider, merge_wire_llm_key
 from tools.loader import set_confirmation_callback, set_notification_callback
 from tools.narrate import set_narrate_callback
+from tools.subagent_context import set_subagent_permission_callback
 from user_input_parse import UserInputSymbolTable, build_user_input_symbol_table
 
 from .post_model_config import collect_post_model_config_items
-from .stdio_confirm import stdio_tool_confirm, stdio_tool_notify
+from .stdio_confirm import stdio_request_subagent_permissions, stdio_tool_confirm, stdio_tool_notify
 from .stdio_protocol import emit, install_pipe_safe_stdout, read_command_line
 from .stdio_trust import stdio_trust_prompt
 
@@ -272,6 +273,7 @@ def run_cli_stdio() -> None:
     set_confirmation_callback(stdio_tool_confirm)
     set_notification_callback(stdio_tool_notify)
     set_narrate_callback(_stdio_narrate)
+    set_subagent_permission_callback(stdio_request_subagent_permissions)
     trust.ensure_trust_at_startup(stdio_trust_prompt)
     session = _Session()
     manager = ContentManager()

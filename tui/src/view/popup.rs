@@ -150,6 +150,15 @@ pub enum SelectorKind {
     Provider,
     /// 选模型后：多项 settings.json 配置项列表
     ModelConfig,
+    /// 子 Agent 工具类别权限选择
+    SubagentPermission,
+}
+
+/// 子 Agent 权限选择框：内含请求 id 和多选 Selector。
+#[derive(Debug)]
+pub struct SubagentPermissionSelector {
+    pub id: String,
+    pub selector: Selector,
 }
 
 #[derive(Debug)]
@@ -348,6 +357,41 @@ impl Selector {
 
     pub fn collect_selected(&self) -> Vec<String> {
         self.selected.iter().cloned().collect()
+    }
+
+    /// 返回选中项对应的 id（populate_with_ids 时有效），否则退化为 collect_selected。
+    pub fn collect_selected_ids(&self) -> Vec<String> {
+        if self.item_ids.is_empty() {
+            return self.collect_selected();
+        }
+        self.items
+            .iter()
+            .zip(self.item_ids.iter())
+            .filter(|(label, _)| self.selected.contains(*label))
+            .map(|(_, id)| id.clone())
+            .collect()
+    }
+}
+
+impl SubagentPermissionSelector {
+    pub fn new(id: String, categories: Vec<String>) -> Self {
+        let labels: Vec<String> = categories
+            .iter()
+            .map(|c| match c.as_str() {
+                "read_fs" => "读取文件 (read_fs)".to_string(),
+                "write_fs" => "写入文件 (write_fs)".to_string(),
+                "exec" => "执行命令 (exec)".to_string(),
+                "network" => "访问网络 (network)".to_string(),
+                other => other.to_string(),
+            })
+            .collect();
+        let mut sel = Selector::new(
+            SelectorKind::SubagentPermission,
+            "选择子 Agent 权限",
+            true,
+        );
+        sel.populate_with_ids(labels, categories, vec![]);
+        Self { id, selector: sel }
     }
 }
 

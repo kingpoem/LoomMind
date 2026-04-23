@@ -13,6 +13,8 @@ import trust
 from settings import get
 from trust import TrustCategory
 
+from tools.subagent_context import get_allowed_categories
+
 from .server import builtin_server, requires_confirmation, tool_category, tool_preview
 
 logger = logging.getLogger(__name__)
@@ -88,7 +90,13 @@ def _make_tool(name: str, description: str, input_schema: dict) -> StructuredToo
 
     async def arun(**kwargs) -> str:
         if needs_confirm and not trust.auto_approve(name):
-            if not _confirm_callback(name, kwargs):
+            allowed_cats = get_allowed_categories()
+            if allowed_cats is not None:
+                # 子 Agent 上下文：按预授权类别决定，不弹出用户确认框
+                cat = tool_category(name)
+                if cat is not None and cat not in allowed_cats:
+                    return f"子 Agent 工具调用已拒绝：{name} 需要 {cat.name} 权限，但当前子 Agent 未获授权。"
+            elif not _confirm_callback(name, kwargs):
                 return f"Tool call '{name}' denied by user."
         # 即便 auto_approve 跳过了确认，也要让用户看到「工具确实被调用了」。
         try:
