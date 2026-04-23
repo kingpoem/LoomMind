@@ -1,8 +1,9 @@
-"""ask_user / finish_task 工具：终止当前规划循环并向用户输出消息。"""
+"""ask_user / finish_task / notify 工具：规划循环的用户交互出口与中间叙述。"""
 
 from mcp.server.fastmcp import FastMCP
 
 from planning.exit_signal import set_exit
+from tools.narrate import narrate as _narrate
 from trust import TrustCategory
 
 
@@ -32,5 +33,23 @@ def register(mcp: FastMCP) -> dict[str, TrustCategory]:
 
         set_exit("finish_task", message)
         return "__finish_task__"
+
+    @mcp.tool()
+    def notify(message: str) -> str:
+        """向用户发送一条中间进度消息，规划循环继续执行，不会终止。
+
+        与 finish_task / ask_user 的本质区别：调用后循环不会停止，可继续调用其他工具。
+        用于在执行长任务时让用户了解关键进展，而非沉默地执行一长串工具调用。
+
+        使用约束（避免滥用）：
+        - 只在有实质性结论可汇报时调用，例如"已分析完文件，发现 X 问题"。
+        - 不要在工具调用前预告意图（"我将要读取…"）；
+          应在获得结果后汇报发现（"已读取配置，确认端口为 8080"）。
+        - 每完成一个执行阶段至多调用一次。
+
+        参数 message：**简要的**进展说明，一到两句话，自然语言。
+        """
+        _narrate(message)
+        return "ok"
 
     return {}
