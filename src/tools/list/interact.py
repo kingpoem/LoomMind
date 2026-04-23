@@ -16,6 +16,7 @@ def register(mcp: FastMCP) -> dict[str, TrustCategory]:
 
         参数 message：展示给用户的问题或说明（自然语言，不需要 JSON 包装）。
         """
+
         set_exit("ask_user", message)
         return "__ask_user__"
 
@@ -28,6 +29,7 @@ def register(mcp: FastMCP) -> dict[str, TrustCategory]:
 
         参数 message：向用户呈现的最终结论或完成通知（自然语言）。
         """
+
         set_exit("finish_task", message)
         return "__finish_task__"
 
