@@ -32,6 +32,7 @@ from planning import resolve_planning_max_cycles
 from prompt_text import load_template_prompt
 from settings import get_str, merge_llm_provider, merge_wire_llm_key
 from tools.loader import set_confirmation_callback, set_notification_callback
+from tools.narrate import set_narrate_callback
 from user_input_parse import UserInputSymbolTable, build_user_input_symbol_table
 
 from .post_model_config import collect_post_model_config_items
@@ -262,10 +263,15 @@ def _emit_llm_config(session: _Session) -> None:
     )
 
 
+def _stdio_narrate(message: str) -> None:
+    emit({"type": "assistant_delta", "text": message + "\n"})
+
+
 def run_cli_stdio() -> None:
     install_pipe_safe_stdout()
     set_confirmation_callback(stdio_tool_confirm)
     set_notification_callback(stdio_tool_notify)
+    set_narrate_callback(_stdio_narrate)
     trust.ensure_trust_at_startup(stdio_trust_prompt)
     session = _Session()
     manager = ContentManager()

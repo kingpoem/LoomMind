@@ -9,7 +9,7 @@ from planning.loop import build_planning_graph
 from trust import TrustCategory
 
 # 子 Agent 不开放的工具——防递归、防全局状态污染
-_EXCLUDED_TOOLS = frozenset({"call_subagent", "ask_user", "finish_task", "plan", "update_plan"})
+_EXCLUDED_TOOLS = frozenset({"call_subagent", "ask_user", "finish_task", "notify", "plan", "update_plan"})
 
 _DEFAULT_MAX_CYCLES = 6
 _MAX_CYCLES_CAP = 12
