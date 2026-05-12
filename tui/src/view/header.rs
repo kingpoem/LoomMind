@@ -19,7 +19,10 @@ pub fn insert_header(term: &mut Term) -> io::Result<()> {
     let info_lines: Vec<Line<'static>> = vec![
         Line::from(vec![
             Span::styled("backend:   ", Style::default().fg(palette::DIM)),
-            Span::styled(".venv python --cli --stdio", Style::default().fg(palette::FG)),
+            Span::styled(
+                ".venv python --cli --stdio",
+                Style::default().fg(palette::FG),
+            ),
         ]),
         Line::from(vec![
             Span::styled("directory: ", Style::default().fg(palette::DIM)),

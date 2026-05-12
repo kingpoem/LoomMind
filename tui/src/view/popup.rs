@@ -385,11 +385,7 @@ impl SubagentPermissionSelector {
                 other => other.to_string(),
             })
             .collect();
-        let mut sel = Selector::new(
-            SelectorKind::SubagentPermission,
-            "选择子 Agent 权限",
-            true,
-        );
+        let mut sel = Selector::new(SelectorKind::SubagentPermission, "选择子 Agent 权限", true);
         sel.populate_with_ids(labels, categories, vec![]);
         Self { id, selector: sel }
     }
