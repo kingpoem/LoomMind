@@ -209,10 +209,7 @@ def build_planning_graph(
         cycle = int(state.get("cycle_count", 0))
         limit = int(state.get("max_cycles", graph_max_cycles))
         outline = list(state.get("task_outline", []))
-        planner_body = (
-            _memory_hint(short_mem, long_mem, cycle=cycle, limit=limit, task_outline=outline)
-            + f"\n\n当前循环次数: {cycle}/{limit}。"
-        )
+        planner_body = _memory_hint(short_mem, long_mem, cycle=cycle, limit=limit, task_outline=outline) + f"\n\n当前循环次数: {cycle}/{limit}。"
         to_invoke = _merge_block_into_first_system(
             list(state["messages"]),
             planner_body,

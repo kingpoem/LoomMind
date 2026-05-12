@@ -3,13 +3,22 @@ from langchain_openai import ChatOpenAI
 
 from llm_sanitize import sanitize_messages_for_llm
 
+from .deepseek import (
+    available_models_list as available_deepseek_models_list,
+)
+from .deepseek import (
+    create_deepseek_chat_model,
+    default_deepseek_model,
+)
 from .ollama import (
     create_ollama_chat_model,
     default_ollama_model,
     list_ollama_models,
 )
 from .openrouter import (
-    available_models_list,
+    available_models_list as available_openrouter_models_list,
+)
+from .openrouter import (
     create_openrouter_chat_model,
     default_openrouter_model,
 )
@@ -24,6 +33,11 @@ def create_chat_model(model: str | None = None, *, llm: LLMRuntimeSettings | Non
             model=model,
             base_url_override=llm.ollama_base_url if llm else None,
         )
+    if provider is LLMProvider.DEEPSEEK:
+        return create_deepseek_chat_model(
+            model=model,
+            api_key=llm.deepseek_api_key if llm else None,
+        )
     return create_openrouter_chat_model(
         model=model,
         api_key=llm.openrouter_api_key if llm else None,
@@ -36,7 +50,9 @@ def list_available_models(*, llm: LLMRuntimeSettings | None = None) -> list[str]
         return list_ollama_models(
             base_url_override=llm.ollama_base_url if llm else None,
         )
-    return list(available_models_list())
+    if provider is LLMProvider.DEEPSEEK:
+        return list(available_deepseek_models_list())
+    return list(available_openrouter_models_list())
 
 
 def default_model_name(*, llm: LLMRuntimeSettings | None = None) -> str:
@@ -45,6 +61,8 @@ def default_model_name(*, llm: LLMRuntimeSettings | None = None) -> str:
         return default_ollama_model(
             base_url_override=llm.ollama_base_url if llm else None,
         )
+    if provider is LLMProvider.DEEPSEEK:
+        return default_deepseek_model()
     return default_openrouter_model()
 
 

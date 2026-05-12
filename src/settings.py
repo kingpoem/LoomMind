@@ -13,6 +13,7 @@ _settings_cache: dict[str, Any] | None = None
 WIRE_LLM_KEYS_TO_JSON: dict[str, str] = {
     "OPENROUTER_API_KEY": "llm.openrouter.api_key",
     "OLLAMA_BASE_URL": "llm.ollama.base_url",
+    "DEEPSEEK_API_KEY": "llm.deepseek.api_key",
 }
 
 
@@ -58,7 +59,7 @@ def _default_settings() -> dict[str, Any]:
     p = template_settings_path()
     if not p.is_file():
         return {}
-    return json.loads(p.read_text(encoding="utf-8"))
+    return json.loads(p.read_text(encoding="utf-8-sig"))
 
 
 def _load_raw() -> dict[str, Any]:
@@ -67,7 +68,7 @@ def _load_raw() -> dict[str, Any]:
     user_path = settings_path()
     if not user_path.is_file():
         return defaults
-    user_data = json.loads(user_path.read_text(encoding="utf-8"))
+    user_data = json.loads(user_path.read_text(encoding="utf-8-sig"))
     return _deep_merge(defaults, user_data)
 
 
@@ -160,7 +161,7 @@ def merge_wire_llm_key(wire_key: str, value: str | None) -> None:
 
 def merge_llm_provider(provider: str) -> None:
     v = provider.strip().lower()
-    if v not in ("openrouter", "ollama"):
+    if v not in ("openrouter", "ollama", "deepseek"):
         raise ValueError(provider)
     ensure_settings_file()
     path = settings_path()

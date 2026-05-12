@@ -7,7 +7,6 @@ from mcp.server.fastmcp import FastMCP
 
 from planning.loop import build_planning_graph
 from tools.subagent_context import (
-    get_allowed_categories,
     get_permission_callback,
     set_allowed_categories,
 )
@@ -23,10 +22,7 @@ _DEPTH_MAX = 3
 # 每个线程独立的嵌套深度计数，避免 Feishu 多线程互相干扰
 _thread_local = threading.local()
 
-_SUB_AGENT_SYSTEM = (
-    "你是一个子 Agent，负责完成上级 Agent 委托的特定子任务。"
-    "请独立完成任务并直接输出结论，无需调用 finish_task 或 ask_user。"
-)
+_SUB_AGENT_SYSTEM = "你是一个子 Agent，负责完成上级 Agent 委托的特定子任务。请独立完成任务并直接输出结论，无需调用 finish_task 或 ask_user。"
 
 
 def _depth() -> int:
@@ -57,6 +53,7 @@ def register(mcp: FastMCP) -> dict[str, TrustCategory]:
         cycles = max(1, min(int(max_cycles), _MAX_CYCLES_CAP))
 
         from tools.loader import load_tools  # noqa: PLC0415 — 延迟导入，避免循环依赖
+
         all_tools = load_tools()
         sub_tools = [t for t in all_tools if getattr(t, "name", "") not in _EXCLUDED_TOOLS]
 
@@ -76,12 +73,14 @@ def register(mcp: FastMCP) -> dict[str, TrustCategory]:
         _thread_local.depth = current + 1
         set_allowed_categories(allowed)
         try:
-            result = graph.invoke({
-                "messages": [
-                    SystemMessage(content=_SUB_AGENT_SYSTEM),
-                    HumanMessage(content=prompt),
-                ]
-            })
+            result = graph.invoke(
+                {
+                    "messages": [
+                        SystemMessage(content=_SUB_AGENT_SYSTEM),
+                        HumanMessage(content=prompt),
+                    ]
+                }
+            )
         finally:
             set_allowed_categories(None)
             _thread_local.depth = current

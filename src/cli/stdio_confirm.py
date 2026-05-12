@@ -105,8 +105,6 @@ def stdio_request_subagent_permissions() -> frozenset[TrustCategory] | None:
         cmd = raw.get("type")
         if cmd == "subagent_permission_response" and raw.get("id") == req_id:
             allowed_strs: list = raw.get("allowed") or []
-            return frozenset(
-                _CATEGORY_ID_MAP[s] for s in allowed_strs if s in _CATEGORY_ID_MAP
-            )
+            return frozenset(_CATEGORY_ID_MAP[s] for s in allowed_strs if s in _CATEGORY_ID_MAP)
         if cmd == "shutdown":
             return None

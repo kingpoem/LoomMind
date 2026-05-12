@@ -135,6 +135,8 @@ class _Session:
             self.llm.openrouter_api_key = None
         elif key == "OLLAMA_BASE_URL":
             self.llm.ollama_base_url = None
+        elif key == "DEEPSEEK_API_KEY":
+            self.llm.deepseek_api_key = None
 
     def apply_llm_config(self, raw: dict) -> None:
         if raw.get("clear") is True:
@@ -148,6 +150,8 @@ class _Session:
                     p = str(v).strip().lower()
                     if p == LLMProvider.OLLAMA:
                         self.llm.provider = LLMProvider.OLLAMA
+                    elif p == LLMProvider.DEEPSEEK:
+                        self.llm.provider = LLMProvider.DEEPSEEK
                     elif p == LLMProvider.OPENROUTER:
                         self.llm.provider = LLMProvider.OPENROUTER
                     else:
@@ -155,6 +159,7 @@ class _Session:
             for json_key, attr in (
                 ("openrouter_api_key", "openrouter_api_key"),
                 ("ollama_base_url", "ollama_base_url"),
+                ("deepseek_api_key", "deepseek_api_key"),
             ):
                 if json_key not in raw:
                     continue
@@ -216,7 +221,7 @@ def _emit_providers(session: _Session) -> None:
     emit(
         {
             "type": "providers",
-            "items": [LLMProvider.OPENROUTER, LLMProvider.OLLAMA],
+            "items": [LLMProvider.OPENROUTER, LLMProvider.OLLAMA, LLMProvider.DEEPSEEK],
             "current": session.llm.effective_provider().value,
         }
     )
@@ -242,13 +247,14 @@ def _emit_mcps(session: _Session) -> None:
     )
 
 
-_PERSISTABLE_ENV_KEYS = frozenset({"OPENROUTER_API_KEY", "OLLAMA_BASE_URL"})
+_PERSISTABLE_ENV_KEYS = frozenset({"OPENROUTER_API_KEY", "OLLAMA_BASE_URL", "DEEPSEEK_API_KEY"})
 
 
 def _emit_llm_config(session: _Session) -> None:
     s = session.llm
     p = s.effective_provider()
     ork = s.openrouter_api_key.strip() if s.openrouter_api_key and str(s.openrouter_api_key).strip() else get_str("llm.openrouter.api_key").strip()
+    dsk = s.deepseek_api_key.strip() if s.deepseek_api_key and str(s.deepseek_api_key).strip() else get_str("llm.deepseek.api_key").strip()
     base = normalized_openai_api_base(base_url_override=s.ollama_base_url)
     emit(
         {
@@ -260,6 +266,8 @@ def _emit_llm_config(session: _Session) -> None:
             "ollama_base_from_session": bool(s.ollama_base_url and str(s.ollama_base_url).strip()),
             "provider_from_session": s.provider is not None,
             "model": session.model_name,
+            "deepseek_key_set": bool(dsk),
+            "deepseek_from_session": bool(s.deepseek_api_key and str(s.deepseek_api_key).strip()),
         }
     )
 
@@ -339,11 +347,11 @@ def run_cli_stdio() -> None:
                 continue
             if cmd_type == "set_provider":
                 name = str(raw.get("name", "")).strip().lower()
-                if name not in (LLMProvider.OPENROUTER, LLMProvider.OLLAMA):
+                if name not in (LLMProvider.OPENROUTER, LLMProvider.OLLAMA, LLMProvider.DEEPSEEK):
                     emit(
                         {
                             "type": "error",
-                            "message": "provider 须为 openrouter 或 ollama",
+                            "message": "provider 须为 openrouter、ollama 或 deepseek",
                         }
                     )
                     continue

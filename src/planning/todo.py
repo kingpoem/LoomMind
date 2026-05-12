@@ -71,10 +71,7 @@ def get_context_block() -> str:
     """
     if not _todos:
         return ""
-    lines = [
-        f"{_STATUS_MARKER[item.status]} [{item.id}] {item.content}"
-        for item in _todos
-    ]
+    lines = [f"{_STATUS_MARKER[item.status]} [{item.id}] {item.content}" for item in _todos]
     all_done = all(item.status == TodoStatus.DONE for item in _todos)
     header = "## 任务清单（已全部完成）" if all_done else "## 任务清单"
     return header + "\n" + "\n".join(lines)

@@ -33,5 +33,6 @@ tui/target/
 .pytest_cache/
 .mypy_cache/
 .ruff_cache/
+.uv-cache/
 
 .DS_Store

@@ -20,11 +20,18 @@ def collect_post_model_config_items(session) -> list[dict]:
                     "hint": "openrouter.ai 创建；写入项目根 settings.json",
                 }
             )
+    elif p is LLMProvider.DEEPSEEK:
+        if not _settings_nonempty("llm.deepseek.api_key"):
+            out.append(
+                {
+                    "id": "DEEPSEEK_API_KEY",
+                    "label": "DeepSeek API 密钥",
+                    "hint": "在 DeepSeek Platform 创建；写入项目根 settings.json",
+                }
+            )
     elif p is LLMProvider.OLLAMA:
         # base_url 为空时回退到 llm.ollama.default_origin（template 默认本机 11434）
-        if not _settings_nonempty("llm.ollama.base_url") and not get_str(
-            "llm.ollama.default_origin"
-        ).strip():
+        if not _settings_nonempty("llm.ollama.base_url") and not get_str("llm.ollama.default_origin").strip():
             out.append(
                 {
                     "id": "OLLAMA_BASE_URL",

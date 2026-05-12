@@ -13,9 +13,7 @@ _STATUS_LABEL: dict[TodoStatus, str] = {
 
 
 def _render(todos) -> str:
-    return "\n".join(
-        f"{_STATUS_LABEL[item.status]} [{item.id}] {item.content}" for item in todos
-    )
+    return "\n".join(f"{_STATUS_LABEL[item.status]} [{item.id}] {item.content}" for item in todos)
 
 
 def register(mcp: FastMCP) -> dict[str, TrustCategory]:

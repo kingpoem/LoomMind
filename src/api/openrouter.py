@@ -1,5 +1,3 @@
-# https://openrouter.ai/docs
-
 from langchain_openai import ChatOpenAI
 
 from settings import get, get_str
@@ -33,6 +31,8 @@ def create_openrouter_chat_model(model: str | None = None, *, api_key: str | Non
         key = api_key.strip()
     else:
         key = get_str("llm.openrouter.api_key").strip()
+    if not key:
+        raise ValueError("未配置 OpenRouter API key：请在 settings.json 的 llm.openrouter.api_key 中填写密钥，或在界面中保存 OPENROUTER_API_KEY。")
     return ChatOpenAI(
         model=(model or default_openrouter_model()).strip(),
         openai_api_key=key,

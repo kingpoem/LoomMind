@@ -8,6 +8,7 @@ from settings import get_str
 class LLMProvider(StrEnum):
     OPENROUTER = "openrouter"
     OLLAMA = "ollama"
+    DEEPSEEK = "deepseek"
 
 
 def resolve_llm_provider() -> LLMProvider:
@@ -15,11 +16,14 @@ def resolve_llm_provider() -> LLMProvider:
 
     - 未设置、空串、`openrouter` → OpenRouter；
     - `ollama` → 本地 Ollama；
+    - `deepseek` → DeepSeek 官方 API；
     - 其它未知值 → 回退为 OpenRouter（避免拼写错误导致进程无法启动）。
     """
     raw = get_str("llm.provider").strip().lower()
     if raw == LLMProvider.OLLAMA:
         return LLMProvider.OLLAMA
+    if raw == LLMProvider.DEEPSEEK:
+        return LLMProvider.DEEPSEEK
     if raw in ("", LLMProvider.OPENROUTER):
         return LLMProvider.OPENROUTER
     return LLMProvider.OPENROUTER

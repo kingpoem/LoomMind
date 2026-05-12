@@ -17,6 +17,15 @@
       "default_origin": "http://127.0.0.1:11434",
       "model": "",
       "fallback_model": "llama3.2"
+    },
+    "deepseek": {
+      "api_key": "",
+      "base_url": "https://api.deepseek.com",
+      "available_models": [
+        "deepseek-v4-flash",
+        "deepseek-v4-pro"
+      ],
+      "default_model": "deepseek-v4-flash"
     }
   },
   "planning": {

@@ -11,9 +11,8 @@ from mcp.types import TextContent
 
 import trust
 from settings import get
-from trust import TrustCategory
-
 from tools.subagent_context import get_allowed_categories
+from trust import TrustCategory
 
 from .server import builtin_server, requires_confirmation, tool_category, tool_preview
 

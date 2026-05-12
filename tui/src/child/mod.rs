@@ -143,6 +143,37 @@ fn child_stderr_log_path() -> PathBuf {
     std::env::temp_dir().join("loommind-tui-child.log")
 }
 
+fn backend_command(root: &PathBuf) -> (PathBuf, Vec<String>) {
+    let venv_python = if cfg!(windows) {
+        root.join(".venv").join("Scripts").join("python.exe")
+    } else {
+        root.join(".venv").join("bin").join("python")
+    };
+    if venv_python.is_file() {
+        return (
+            venv_python,
+            vec![
+                "-u".to_string(),
+                "src/main.py".to_string(),
+                "--cli".to_string(),
+                "--stdio".to_string(),
+            ],
+        );
+    }
+
+    (
+        PathBuf::from("uv"),
+        vec![
+            "run".to_string(),
+            "python".to_string(),
+            "-u".to_string(),
+            "src/main.py".to_string(),
+            "--cli".to_string(),
+            "--stdio".to_string(),
+        ],
+    )
+}
+
 pub fn spawn_child(root: &PathBuf) -> io::Result<(Child, ChildStdin, Receiver<ChildEvent>)> {
     let log_path = child_stderr_log_path();
     let log_file = std::fs::OpenOptions::new()
@@ -150,8 +181,9 @@ pub fn spawn_child(root: &PathBuf) -> io::Result<(Child, ChildStdin, Receiver<Ch
         .append(true)
         .open(&log_path)?;
 
-    let mut child = Command::new("uv")
-        .args(["run", "python", "-u", "src/main.py", "--cli", "--stdio"])
+    let (program, args) = backend_command(root);
+    let mut child = Command::new(program)
+        .args(args)
         .current_dir(root)
         .env("PYTHONUNBUFFERED", "1")
         .stdin(Stdio::piped())

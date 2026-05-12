@@ -12,6 +12,7 @@ class LLMRuntimeSettings:
     provider: LLMProvider | None = None
     openrouter_api_key: str | None = None
     ollama_base_url: str | None = None
+    deepseek_api_key: str | None = None
 
     def effective_provider(self) -> LLMProvider:
         if self.provider is not None:

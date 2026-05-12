@@ -22,10 +22,7 @@ def _sanitize_emit_value(obj: object) -> object:
     if isinstance(obj, str):
         return _utf8_safe_str(obj)
     if isinstance(obj, dict):
-        return {
-            (_utf8_safe_str(k) if isinstance(k, str) else k): _sanitize_emit_value(v)
-            for k, v in obj.items()
-        }
+        return {(_utf8_safe_str(k) if isinstance(k, str) else k): _sanitize_emit_value(v) for k, v in obj.items()}
     if isinstance(obj, list):
         return [_sanitize_emit_value(x) for x in obj]
     if isinstance(obj, tuple):
